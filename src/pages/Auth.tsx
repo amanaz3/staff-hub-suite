@@ -96,30 +96,43 @@ export const Auth = () => {
   const handleDemoLogin = async (type: 'admin' | 'staff') => {
     const account = demoAccounts[type];
     console.log('Demo login clicked for:', type);
-    
-    // Try to sign in first
     setIsSubmitting(true);
-    const { error } = await signIn(account.email, account.password);
     
-    if (error) {
-      console.log('Demo account doesn\'t exist, creating it...');
-      // If sign in fails, create the account
-      const { error: signUpError } = await signUp(account.email, account.password, {
-        full_name: account.full_name,
-        role: account.role,
-        department: account.department,
-        position: account.position
-      });
+    try {
+      // Try to sign in first
+      const { error: signInError } = await signIn(account.email, account.password);
       
-      if (!signUpError) {
-        // After successful signup, try to sign in again
-        setTimeout(async () => {
-          await signIn(account.email, account.password);
-        }, 1000);
+      if (signInError) {
+        console.log('Demo account doesn\'t exist or needs confirmation, creating it...');
+        
+        // If sign in fails, create the account
+        const { error: signUpError } = await signUp(account.email, account.password, {
+          full_name: account.full_name,
+          role: account.role,
+          department: account.department,
+          position: account.position
+        });
+        
+        if (!signUpError) {
+          toast({
+            title: "Demo Account Created",
+            description: "Demo account created successfully! You can now sign in.",
+          });
+          
+          // Set the form fields for manual login
+          setSignInData({ email: account.email, password: account.password });
+        }
       }
+    } catch (error) {
+      console.error('Demo login error:', error);
+      toast({
+        title: "Demo Login Failed",
+        description: "There was an issue with the demo login. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-    
-    setIsSubmitting(false);
   };
 
   if (loading) {
@@ -226,6 +239,7 @@ export const Auth = () => {
                       variant="outline"
                       onClick={() => handleDemoLogin('admin')}
                       className="flex flex-col h-auto p-4 space-y-2"
+                      disabled={isSubmitting}
                     >
                       <Badge variant="secondary" className="text-xs">Admin</Badge>
                       <span className="text-xs text-muted-foreground">
@@ -237,12 +251,23 @@ export const Auth = () => {
                       variant="outline"
                       onClick={() => handleDemoLogin('staff')}
                       className="flex flex-col h-auto p-4 space-y-2"
+                      disabled={isSubmitting}
                     >
                       <Badge variant="outline" className="text-xs">Staff</Badge>
                       <span className="text-xs text-muted-foreground">
                         Employee View
                       </span>
                     </Button>
+                  </div>
+
+                  <div className="text-center space-y-2">
+                    <p className="text-xs text-muted-foreground">
+                      Click demo buttons to create and access test accounts
+                    </p>
+                    <p className="text-xs text-muted-foreground font-medium">
+                      Admin: admin@hrflow.com / admin123<br/>
+                      Staff: staff@hrflow.com / staff123
+                    </p>
                   </div>
                 </div>
               </CardContent>

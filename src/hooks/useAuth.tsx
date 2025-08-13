@@ -128,11 +128,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (error) {
         console.error('Sign in error:', error);
-        toast({
-          title: "Sign In Failed",
-          description: error.message,
-          variant: "destructive",
-        });
+        
+        // Handle specific error cases
+        if (error.message === 'Email not confirmed') {
+          toast({
+            title: "Email Not Confirmed",
+            description: "Please check your email and click the confirmation link, or use the sign up form to create a new account.",
+            variant: "destructive",
+          });
+        } else if (error.message === 'Invalid login credentials') {
+          toast({
+            title: "Invalid Credentials",
+            description: "Please check your email and password, or use a demo account.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Sign In Failed",
+            description: error.message,
+            variant: "destructive",
+          });
+        }
       } else {
         console.log('Sign in successful');
         toast({
