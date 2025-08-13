@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Users, Lock, Mail, User } from "lucide-react";
 
 export const Auth = () => {
-  const { user, signIn, signUp, loading } = useAuth();
+  const { user, profile, signIn, signUp, loading } = useAuth();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -48,8 +48,8 @@ export const Auth = () => {
     }
   };
 
-  // Redirect if already authenticated
-  if (user && !loading) {
+  // Only redirect if user exists AND profile is loaded (or loading is complete)
+  if (user && !loading && profile) {
     return <Navigate to="/" replace />;
   }
 

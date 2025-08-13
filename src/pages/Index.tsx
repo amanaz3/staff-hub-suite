@@ -23,8 +23,23 @@ const Index = () => {
     );
   }
 
-  if (!user || !profile) {
+  // Only redirect to auth if we're sure there's no user (loading is complete)
+  if (!loading && !user) {
     return <Navigate to="/auth" replace />;
+  }
+
+  // Show loading while profile is being fetched
+  if (!loading && user && !profile) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Users className="h-8 w-8 text-primary-foreground" />
+          </div>
+          <p className="text-muted-foreground">Setting up your profile...</p>
+        </div>
+      </div>
+    );
   }
 
   const navigationItems = [
