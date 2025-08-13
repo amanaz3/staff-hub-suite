@@ -25,6 +25,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     let mounted = true;
+    let profileFetchTimeout: NodeJS.Timeout;
     
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -35,13 +36,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setSession(session);
         setUser(session?.user ?? null);
         
+        // Clear any pending profile fetch
+        if (profileFetchTimeout) {
+          clearTimeout(profileFetchTimeout);
+        }
+        
         if (session?.user && event !== 'SIGNED_OUT') {
-          // Defer profile fetching to avoid blocking auth state change
-          setTimeout(() => {
+          // Debounce profile fetching to avoid multiple calls
+          profileFetchTimeout = setTimeout(() => {
             if (mounted) {
               fetchProfile(session.user.id);
             }
-          }, 100);
+          }, 200);
         } else {
           setProfile(null);
         }
@@ -59,13 +65,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        fetchProfile(session.user.id);
+        // Debounce initial profile fetch as well
+        profileFetchTimeout = setTimeout(() => {
+          if (mounted) {
+            fetchProfile(session.user.id);
+          }
+        }, 200);
       }
       setLoading(false);
     });
 
     return () => {
       mounted = false;
+      if (profileFetchTimeout) {
+        clearTimeout(profileFetchTimeout);
+      }
       subscription.unsubscribe();
     };
   }, []);
@@ -77,9 +91,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .from('profiles')
         .select('*')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle(); // Use maybeSingle instead of single to avoid errors when no data
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
         console.error('Error fetching profile:', error);
         return;
       }

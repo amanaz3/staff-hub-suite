@@ -57,7 +57,7 @@ const Index = () => {
         <Dashboard 
           userRole={profile.role} 
           currentUser={{
-            name: profile.full_name,
+            name: profile.full_name || profile.email.split('@')[0],
             email: profile.email,
             avatar: profile.avatar_url
           }}
