@@ -178,72 +178,74 @@ export const Dashboard = ({ userRole, currentUser, userProfile, onLogout }: Dash
           </div>
         )}
 
-        {/* Dashboard Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card className="hover:shadow-lg transition-all duration-200">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Total Staff
-              </CardTitle>
-              <Users className="h-5 w-5 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-foreground">{dashboardData.totalStaff}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Active employees
-              </p>
-            </CardContent>
-          </Card>
+        {/* Dashboard Stats (Admin only) */}
+        {userRole === 'admin' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <Card className="hover:shadow-lg transition-all duration-200">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Total Staff
+                </CardTitle>
+                <Users className="h-5 w-5 text-primary" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-foreground">{dashboardData.totalStaff}</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Active employees
+                </p>
+              </CardContent>
+            </Card>
 
-          <Card className="hover:shadow-lg transition-all duration-200">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Present Today
-              </CardTitle>
-              <UserCheck className="h-5 w-5 text-status-present" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-foreground">{dashboardData.loggedInToday}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Out of {dashboardData.totalStaff} total
-              </p>
-            </CardContent>
-          </Card>
+            <Card className="hover:shadow-lg transition-all duration-200">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Present Today
+                </CardTitle>
+                <UserCheck className="h-5 w-5 text-status-present" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-foreground">{dashboardData.loggedInToday}</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Out of {dashboardData.totalStaff} total
+                </p>
+              </CardContent>
+            </Card>
 
-          <Card className="hover:shadow-lg transition-all duration-200">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                On Leave Today
-              </CardTitle>
-              <Calendar className="h-5 w-5 text-status-pending" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-foreground">{dashboardData.onLeaveToday}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Approved absences
-              </p>
-            </CardContent>
-          </Card>
+            <Card className="hover:shadow-lg transition-all duration-200">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  On Leave Today
+                </CardTitle>
+                <Calendar className="h-5 w-5 text-status-pending" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-foreground">{dashboardData.onLeaveToday}</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Approved absences
+                </p>
+              </CardContent>
+            </Card>
 
-          <Card className="hover:shadow-lg transition-all duration-200">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {userRole === 'admin' ? 'Pending Requests' : 'My Leave Balance'}
-              </CardTitle>
-              <Clock className="h-5 w-5 text-status-pending" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-foreground">
-                {userRole === 'admin' ? dashboardData.pendingRequests : '12'}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {userRole === 'admin' ? 'Awaiting approval' : 'Days remaining'}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+            <Card className="hover:shadow-lg transition-all duration-200">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  {userRole === 'admin' ? 'Pending Requests' : 'My Leave Balance'}
+                </CardTitle>
+                <Clock className="h-5 w-5 text-status-pending" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-foreground">
+                  {userRole === 'admin' ? dashboardData.pendingRequests : '12'}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {userRole === 'admin' ? 'Awaiting approval' : 'Days remaining'}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className={`grid grid-cols-1 ${userRole === 'admin' ? 'lg:grid-cols-2' : ''} gap-8`}>
           {/* Today's Attendance */}
           <Card>
             <CardHeader>
@@ -316,40 +318,42 @@ export const Dashboard = ({ userRole, currentUser, userProfile, onLogout }: Dash
             </CardContent>
           </Card>
 
-          {/* Upcoming Leaves */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center text-lg">
-                <CalendarIcon className="h-5 w-5 mr-2 text-primary" />
-                Upcoming Leaves
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {dashboardData.upcomingLeaves.map((leave, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 rounded-lg border bg-muted/20">
-                    <div className="flex items-center space-x-3">
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                          {leave.name.split(' ').map(n => n[0]).join('')}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <div className="font-medium text-sm">{leave.name}</div>
-                        <div className="text-xs text-muted-foreground">{leave.department}</div>
+          {/* Upcoming Leaves (Admin only) */}
+          {userRole === 'admin' && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center text-lg">
+                  <CalendarIcon className="h-5 w-5 mr-2 text-primary" />
+                  Upcoming Leaves
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {dashboardData.upcomingLeaves.map((leave, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 rounded-lg border bg-muted/20">
+                      <div className="flex items-center space-x-3">
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                            {leave.name.split(' ').map(n => n[0]).join('')}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="font-medium text-sm">{leave.name}</div>
+                          <div className="text-xs text-muted-foreground">{leave.department}</div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm font-medium">{leave.dates}</div>
+                        <Badge variant="outline" className="text-xs">
+                          {leave.type}
+                        </Badge>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="text-sm font-medium">{leave.dates}</div>
-                      <Badge variant="outline" className="text-xs">
-                        {leave.type}
-                      </Badge>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Alerts for Admin */}
