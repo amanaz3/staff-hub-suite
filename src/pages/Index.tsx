@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Navigate } from "react-router-dom";
 import { Dashboard } from "@/components/Dashboard";
+import { AdminDashboard } from "@/components/AdminDashboard";
 import { LeaveManagement } from "@/components/LeaveManagement";
 import { Button } from "@/components/ui/button";
 import { Users, Calendar, Settings, BarChart } from "lucide-react";
@@ -87,7 +88,7 @@ const Index = () => {
           </header>
 
           <div className="container mx-auto px-6 py-8">
-            {activeTab === 'leaves' && <LeaveManagement userRole={profile.role} />}
+            {activeTab === 'leaves' && <AdminDashboard userRole={profile.role} />}
             {activeTab === 'staff' && (
               <div className="text-center py-12">
                 <h2 className="text-2xl font-bold mb-4">Staff Directory</h2>

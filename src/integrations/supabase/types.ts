@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      allowed_ips: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          ip_address: unknown
+          is_active: boolean
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: string
+          ip_address: unknown
+          is_active?: boolean
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          ip_address?: unknown
+          is_active?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       attendance: {
         Row: {
           break_duration_minutes: number | null
@@ -23,6 +50,8 @@ export type Database = {
           date: string
           employee_id: string | null
           id: string
+          ip_address: unknown | null
+          is_wfh: boolean
           notes: string | null
           status: string
           total_hours: number | null
@@ -36,6 +65,8 @@ export type Database = {
           date: string
           employee_id?: string | null
           id?: string
+          ip_address?: unknown | null
+          is_wfh?: boolean
           notes?: string | null
           status?: string
           total_hours?: number | null
@@ -49,6 +80,8 @@ export type Database = {
           date?: string
           employee_id?: string | null
           id?: string
+          ip_address?: unknown | null
+          is_wfh?: boolean
           notes?: string | null
           status?: string
           total_hours?: number | null
@@ -63,6 +96,84 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      attendance_exceptions: {
+        Row: {
+          admin_comments: string | null
+          attendance_id: string
+          created_at: string
+          document_url: string | null
+          employee_id: string
+          exception_type: string
+          id: string
+          reason: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          admin_comments?: string | null
+          attendance_id: string
+          created_at?: string
+          document_url?: string | null
+          employee_id: string
+          exception_type: string
+          id?: string
+          reason: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          admin_comments?: string | null
+          attendance_id?: string
+          created_at?: string
+          document_url?: string | null
+          employee_id?: string
+          exception_type?: string
+          id?: string
+          reason?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      employee_leave_balances: {
+        Row: {
+          allocated_days: number
+          created_at: string
+          employee_id: string
+          id: string
+          leave_type_id: string
+          updated_at: string
+          used_days: number
+          year: number
+        }
+        Insert: {
+          allocated_days?: number
+          created_at?: string
+          employee_id: string
+          id?: string
+          leave_type_id: string
+          updated_at?: string
+          used_days?: number
+          year?: number
+        }
+        Update: {
+          allocated_days?: number
+          created_at?: string
+          employee_id?: string
+          id?: string
+          leave_type_id?: string
+          updated_at?: string
+          used_days?: number
+          year?: number
+        }
+        Relationships: []
       }
       employees: {
         Row: {
@@ -80,6 +191,7 @@ export type Database = {
           status: string
           updated_at: string | null
           user_id: string | null
+          wfh_enabled: boolean
         }
         Insert: {
           created_at?: string | null
@@ -96,6 +208,7 @@ export type Database = {
           status?: string
           updated_at?: string | null
           user_id?: string | null
+          wfh_enabled?: boolean
         }
         Update: {
           created_at?: string | null
@@ -112,6 +225,7 @@ export type Database = {
           status?: string
           updated_at?: string | null
           user_id?: string | null
+          wfh_enabled?: boolean
         }
         Relationships: [
           {
@@ -262,6 +376,39 @@ export type Database = {
           role?: string
           updated_at?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      work_schedules: {
+        Row: {
+          created_at: string
+          employee_id: string
+          end_time: string
+          id: string
+          is_active: boolean
+          minimum_daily_hours: number
+          start_time: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          employee_id: string
+          end_time?: string
+          id?: string
+          is_active?: boolean
+          minimum_daily_hours?: number
+          start_time?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          employee_id?: string
+          end_time?: string
+          id?: string
+          is_active?: boolean
+          minimum_daily_hours?: number
+          start_time?: string
+          updated_at?: string
         }
         Relationships: []
       }
