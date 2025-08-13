@@ -8,63 +8,79 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Clean, modern color palette inspired by professional banking UI */
-    --background: 248 250 252; /* Light gray-blue background */
-    --foreground: 15 23 42; /* Deep slate for primary text */
-    --card: 255 255 255; /* Pure white cards */
-    --card-foreground: 15 23 42;
-    --popover: 255 255 255;
-    --popover-foreground: 15 23 42;
-    --primary: 37 99 235; /* Professional blue */
-    --primary-foreground: 255 255 255;
-    --secondary: 241 245 249; /* Light gray */
-    --secondary-foreground: 51 65 85;
-    --muted: 248 250 252;
-    --muted-foreground: 100 116 139;
-    --accent: 241 245 249;
-    --accent-foreground: 51 65 85;
-    --destructive: 239 68 68;
-    --destructive-foreground: 255 255 255;
-    --border: 226 232 240;
-    --input: 226 232 240;
-    --ring: 37 99 235;
-    --chart-1: 37 99 235;
-    --chart-2: 16 185 129;
-    --chart-3: 245 158 11;
-    --chart-4: 239 68 68;
-    --chart-5: 139 92 246;
+    /* HR Management System Design Tokens */
+    --background: 210 17% 98%;
+    --foreground: 215 25% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 215 25% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 25% 15%;
+
+    /* Professional corporate blue theme */
+    --primary: 215 90% 50%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 215 90% 65%;
+
+    --secondary: 210 20% 95%;
+    --secondary-foreground: 215 25% 25%;
+
+    --muted: 210 15% 96%;
+    --muted-foreground: 215 15% 55%;
+
+    --accent: 215 85% 55%;
+    --accent-foreground: 0 0% 100%;
+
+    /* Status colors for HR system */
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    --warning: 45 93% 47%;
+    --warning-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Neutral grays */
+    --border: 210 15% 90%;
+    --input: 210 15% 92%;
+    --ring: 215 90% 50%;
+
+    /* HR-specific colors */
+    --approved: 142 76% 36%;
+    --pending: 45 93% 47%;
+    --rejected: 0 84% 60%;
+    --absent: 0 84% 60%;
+    --present: 142 76% 36%;
+    --late: 45 93% 47%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(215 90% 50%), hsl(215 90% 65%));
+    --gradient-success: linear-gradient(135deg, hsl(142 76% 36%), hsl(142 76% 45%));
+    --gradient-card: linear-gradient(135deg, hsl(0 0% 100%), hsl(210 15% 98%));
+
+    /* Shadows */
+    --shadow-card: 0 2px 8px -2px hsl(215 25% 15% / 0.1);
+    --shadow-elevated: 0 8px 32px -8px hsl(215 25% 15% / 0.15);
+
     --radius: 0.75rem;
 
-    /* Status colors matching the professional theme */
-    --status-present: 16 185 129; /* Green */
-    --status-late: 245 158 11; /* Amber */
-    --status-absent: 239 68 68; /* Red */
-    --status-approved: 16 185 129; /* Green */
-    --status-pending: 245 158 11; /* Amber */
-    --status-rejected: 239 68 68; /* Red */
+    --radius: 0.5rem;
 
-    /* Success green for badges and highlights */
-    --success: 16 185 129;
-    --success-foreground: 255 255 255;
-    
-    /* Professional gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(213 94% 68%), hsl(217 91% 60%));
-    --gradient-success: linear-gradient(135deg, hsl(142 71% 45%), hsl(160 84% 39%));
-    
-    /* Enhanced shadows for depth */
-    --shadow-soft: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-    --shadow-medium: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-    --shadow-large: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --sidebar-background: 0 0% 98%;
 
-    /* Sidebar colors */
-    --sidebar-background: 248 250 252;
-    --sidebar-foreground: 15 23 42;
-    --sidebar-primary: 37 99 235;
-    --sidebar-primary-foreground: 255 255 255;
-    --sidebar-accent: 241 245 249;
-    --sidebar-accent-foreground: 51 65 85;
-    --sidebar-border: 226 232 240;
-    --sidebar-ring: 37 99 235;
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
   .dark {
@@ -113,10 +129,5 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
-    font-synthesis: none;
-    text-rendering: optimizeLegibility;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
   }
 }
