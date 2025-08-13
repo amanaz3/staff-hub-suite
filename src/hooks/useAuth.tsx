@@ -81,51 +81,71 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signUp = async (email: string, password: string, userData: any) => {
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: {
-          full_name: userData.full_name,
-          role: userData.role || 'staff'
+    try {
+      console.log('Attempting to sign up with:', { email, userData });
+      const redirectUrl = `${window.location.origin}/`;
+      
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: redirectUrl,
+          data: {
+            full_name: userData.full_name,
+            role: userData.role || 'staff'
+          }
         }
+      });
+
+      if (error) {
+        console.error('Sign up error:', error);
+        toast({
+          title: "Sign Up Failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Sign Up Successful",
+          description: "Please check your email to verify your account.",
+        });
       }
-    });
 
-    if (error) {
-      toast({
-        title: "Sign Up Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    } else {
-      toast({
-        title: "Sign Up Successful",
-        description: "Please check your email to verify your account.",
-      });
+      return { error };
+    } catch (err) {
+      console.error('Sign up exception:', err);
+      return { error: err };
     }
-
-    return { error };
   };
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) {
-      toast({
-        title: "Sign In Failed",
-        description: error.message,
-        variant: "destructive",
+    try {
+      console.log('Attempting to sign in with:', email);
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
-    }
 
-    return { error };
+      if (error) {
+        console.error('Sign in error:', error);
+        toast({
+          title: "Sign In Failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        console.log('Sign in successful');
+        toast({
+          title: "Welcome back!",
+          description: "You have been successfully signed in.",
+        });
+      }
+
+      return { error };
+    } catch (err) {
+      console.error('Sign in exception:', err);
+      return { error: err };
+    }
   };
 
   const signOut = async () => {

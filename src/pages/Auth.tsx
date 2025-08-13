@@ -8,10 +8,12 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 import { Users, Lock, Mail, User } from "lucide-react";
 
 export const Auth = () => {
   const { user, signIn, signUp, loading } = useAuth();
+  const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Form states
@@ -53,15 +55,31 @@ export const Auth = () => {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Form submitted with:', signInData);
     setIsSubmitting(true);
-    await signIn(signInData.email, signInData.password);
-    setIsSubmitting(false);
+    
+    try {
+      const { error } = await signIn(signInData.email, signInData.password);
+      if (!error) {
+        console.log('Sign in successful, redirecting...');
+        // The auth context will handle the redirect automatically
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (signUpData.password !== signUpData.confirmPassword) {
+      toast({
+        title: "Passwords don't match",
+        description: "Please make sure your passwords match.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -75,9 +93,33 @@ export const Auth = () => {
     setIsSubmitting(false);
   };
 
-  const handleDemoLogin = (type: 'admin' | 'staff') => {
+  const handleDemoLogin = async (type: 'admin' | 'staff') => {
     const account = demoAccounts[type];
-    setSignInData({ email: account.email, password: account.password });
+    console.log('Demo login clicked for:', type);
+    
+    // Try to sign in first
+    setIsSubmitting(true);
+    const { error } = await signIn(account.email, account.password);
+    
+    if (error) {
+      console.log('Demo account doesn\'t exist, creating it...');
+      // If sign in fails, create the account
+      const { error: signUpError } = await signUp(account.email, account.password, {
+        full_name: account.full_name,
+        role: account.role,
+        department: account.department,
+        position: account.position
+      });
+      
+      if (!signUpError) {
+        // After successful signup, try to sign in again
+        setTimeout(async () => {
+          await signIn(account.email, account.password);
+        }, 1000);
+      }
+    }
+    
+    setIsSubmitting(false);
   };
 
   if (loading) {
