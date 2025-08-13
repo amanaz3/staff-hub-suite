@@ -1,34 +1,36 @@
 import { useState } from "react";
-import { LoginForm } from "@/components/LoginForm";
+import { Navigate } from "react-router-dom";
 import { Dashboard } from "@/components/Dashboard";
 import { LeaveManagement } from "@/components/LeaveManagement";
 import { Button } from "@/components/ui/button";
 import { Users, Calendar, Settings, BarChart } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 const Index = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const { user, profile, loading, signOut } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
 
-  const handleLogin = (role: 'admin' | 'staff', userData: any) => {
-    setCurrentUser({ ...userData, role });
-    setIsLoggedIn(true);
-  };
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Users className="h-8 w-8 text-primary-foreground" />
+          </div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
-  const handleLogout = () => {
-    setIsLoggedIn(false);
-    setCurrentUser(null);
-    setActiveTab('dashboard');
-  };
-
-  if (!isLoggedIn) {
-    return <LoginForm onLogin={handleLogin} />;
+  if (!user || !profile) {
+    return <Navigate to="/auth" replace />;
   }
 
   const navigationItems = [
     { id: 'dashboard', label: 'Dashboard', icon: BarChart },
     { id: 'leaves', label: 'Leave Management', icon: Calendar },
-    ...(currentUser?.role === 'admin' ? [
+    ...(profile?.role === 'admin' ? [
       { id: 'staff', label: 'Staff Directory', icon: Users },
       { id: 'settings', label: 'Settings', icon: Settings }
     ] : [])
@@ -38,9 +40,13 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       {activeTab === 'dashboard' && (
         <Dashboard 
-          userRole={currentUser.role} 
-          currentUser={currentUser}
-          onLogout={handleLogout}
+          userRole={profile.role} 
+          currentUser={{
+            name: profile.full_name,
+            email: profile.email,
+            avatar: profile.avatar_url
+          }}
+          onLogout={signOut}
         />
       )}
 
@@ -53,7 +59,7 @@ const Index = () => {
                 <div className="flex items-center space-x-4">
                   <div className="text-2xl font-bold text-primary">HRFlow</div>
                 </div>
-                <Button variant="outline" onClick={handleLogout} size="sm">
+                <Button variant="outline" onClick={signOut} size="sm">
                   Logout
                 </Button>
               </div>
@@ -61,7 +67,7 @@ const Index = () => {
           </header>
 
           <div className="container mx-auto px-6 py-8">
-            {activeTab === 'leaves' && <LeaveManagement userRole={currentUser.role} />}
+            {activeTab === 'leaves' && <LeaveManagement userRole={profile.role} />}
             {activeTab === 'staff' && (
               <div className="text-center py-12">
                 <h2 className="text-2xl font-bold mb-4">Staff Directory</h2>
