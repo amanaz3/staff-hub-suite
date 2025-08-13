@@ -125,27 +125,40 @@ export const Dashboard = ({ userRole, currentUser, userProfile, onLogout }: Dash
   };
 
   const getStatusBadge = (status: string) => {
-    const variants = {
-      present: "bg-status-present text-white",
-      late: "bg-status-late text-white", 
-      absent: "bg-status-absent text-white",
-      approved: "bg-status-approved text-white",
-      pending: "bg-status-pending text-white",
-      rejected: "bg-status-rejected text-white"
-    };
-    
-    return variants[status as keyof typeof variants] || "bg-muted";
+    return (
+      <Badge className={getStatusStyles(status)}>
+        {status}
+      </Badge>
+    );
+  };
+
+  const getStatusStyles = (status: string) => {
+    switch (status) {
+      case 'present':
+      case 'approved':
+        return "bg-status-present text-white border-transparent";
+      case 'late':
+      case 'pending':
+        return "bg-status-pending text-white border-transparent";
+      case 'absent':
+      case 'rejected':
+        return "bg-status-rejected text-white border-transparent";
+      default:
+        return "bg-muted text-muted-foreground";
+    }
   };
   
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-card shadow-sm">
+      {/* Header with enhanced styling */}
+      <header className="border-b bg-card shadow-soft backdrop-blur-sm">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <div className="text-2xl font-bold text-primary">HRFlow</div>
-              <Badge variant="outline" className="text-sm">
+              <div className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+                HRFlow
+              </div>
+              <Badge variant="outline" className="text-sm font-medium border-primary/20 text-primary bg-primary/5">
                 {userRole === 'admin' ? 'Administrator' : 'Staff Member'}
               </Badge>
             </div>
@@ -181,12 +194,14 @@ export const Dashboard = ({ userRole, currentUser, userProfile, onLogout }: Dash
         {/* Dashboard Stats (Admin only) */}
         {userRole === 'admin' && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <Card className="hover:shadow-lg transition-all duration-200">
+            <Card className="hover:shadow-large transition-all duration-300 border-0 shadow-medium bg-gradient-to-br from-card to-card/80">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
+                <CardTitle className="text-sm font-semibold text-muted-foreground">
                   Total Staff
                 </CardTitle>
-                <Users className="h-5 w-5 text-primary" />
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <Users className="h-5 w-5 text-primary" />
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-foreground">{dashboardData.totalStaff}</div>
@@ -301,7 +316,7 @@ export const Dashboard = ({ userRole, currentUser, userProfile, onLogout }: Dash
                               </div>
                             )}
                           </div>
-                          <Badge className={getStatusBadge(status)}>
+                          <Badge className={getStatusStyles(status)}>
                             {status}
                           </Badge>
                         </div>
