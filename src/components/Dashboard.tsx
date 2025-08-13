@@ -1,16 +1,14 @@
-import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ClockInOut } from "@/components/ClockInOut";
 import { 
   Users, 
   UserCheck, 
   Calendar, 
   Clock, 
-  TrendingUp,
   LogOut,
-  LogIn,
   Calendar as CalendarIcon,
   AlertCircle
 } from "lucide-react";
@@ -22,11 +20,15 @@ interface DashboardProps {
     email: string;
     avatar?: string;
   };
+  userProfile: {
+    user_id: string;
+    email: string;
+    full_name: string;
+  };
   onLogout: () => void;
 }
 
-export const Dashboard = ({ userRole, currentUser, onLogout }: DashboardProps) => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+export const Dashboard = ({ userRole, currentUser, userProfile, onLogout }: DashboardProps) => {
   
   // Mock data - in real app this would come from your backend
   const dashboardData = {
@@ -48,9 +50,6 @@ export const Dashboard = ({ userRole, currentUser, onLogout }: DashboardProps) =
     ]
   };
 
-  const handleClockInOut = () => {
-    setIsLoggedIn(!isLoggedIn);
-  };
 
   const getStatusBadge = (status: string) => {
     const variants = {
@@ -99,40 +98,10 @@ export const Dashboard = ({ userRole, currentUser, onLogout }: DashboardProps) =
       </header>
 
       <div className="container mx-auto px-6 py-8">
-        {/* Quick Actions for Staff */}
+        {/* Clock In/Out for Staff */}
         {userRole === 'staff' && (
           <div className="mb-8">
-            <Card className="border-2 border-primary/20 bg-gradient-to-r from-primary/5 to-primary-glow/5">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-lg font-semibold text-foreground mb-2">
-                      Today's Attendance
-                    </h3>
-                    <p className="text-muted-foreground">
-                      {isLoggedIn ? 'You are currently checked in' : 'Clock in to start your day'}
-                    </p>
-                  </div>
-                  <Button 
-                    onClick={handleClockInOut}
-                    size="lg"
-                    className={isLoggedIn ? "bg-status-rejected hover:bg-status-rejected/90" : "bg-status-present hover:bg-status-present/90"}
-                  >
-                    {isLoggedIn ? (
-                      <>
-                        <LogOut className="h-5 w-5 mr-2" />
-                        Clock Out
-                      </>
-                    ) : (
-                      <>
-                        <LogIn className="h-5 w-5 mr-2" />
-                        Clock In
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            <ClockInOut userProfile={userProfile} />
           </div>
         )}
 

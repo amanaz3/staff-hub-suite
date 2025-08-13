@@ -61,6 +61,11 @@ const Index = () => {
             email: profile.email,
             avatar: profile.avatar_url
           }}
+          userProfile={{
+            user_id: profile.user_id,
+            email: profile.email,
+            full_name: profile.full_name || profile.email.split('@')[0]
+          }}
           onLogout={signOut}
         />
       )}
