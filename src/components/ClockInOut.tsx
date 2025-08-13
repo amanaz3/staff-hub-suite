@@ -307,45 +307,35 @@ export const ClockInOut = ({ userProfile }: ClockInOutProps) => {
             )}
           </div>
           
+          
           <div className="flex gap-3">
-            {state.status === 'not-clocked-in' && (
-              <Button 
-                onClick={handleClockIn}
-                size="lg"
-                disabled={actionLoading}
-                className="bg-status-present hover:bg-status-present/90"
-              >
-                {actionLoading ? (
-                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                ) : (
-                  <LogIn className="h-5 w-5 mr-2" />
-                )}
-                Clock In
-              </Button>
-            )}
+            <Button 
+              onClick={handleClockIn}
+              size="lg"
+              disabled={actionLoading || state.status !== 'not-clocked-in'}
+              className="bg-status-present hover:bg-status-present/90 disabled:opacity-50"
+            >
+              {actionLoading && state.status === 'not-clocked-in' ? (
+                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+              ) : (
+                <LogIn className="h-5 w-5 mr-2" />
+              )}
+              Clock In
+            </Button>
             
-            {state.status === 'clocked-in' && (
-              <Button 
-                onClick={handleClockOut}
-                size="lg"
-                disabled={actionLoading}
-                className="bg-status-rejected hover:bg-status-rejected/90"
-              >
-                {actionLoading ? (
-                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                ) : (
-                  <LogOut className="h-5 w-5 mr-2" />
-                )}
-                Clock Out
-              </Button>
-            )}
-            
-            {state.status === 'clocked-out' && (
-              <div className="flex items-center text-muted-foreground">
-                <Clock className="h-5 w-5 mr-2" />
-                <span>Day completed</span>
-              </div>
-            )}
+            <Button 
+              onClick={handleClockOut}
+              size="lg"
+              disabled={actionLoading || state.status !== 'clocked-in'}
+              className="bg-status-rejected hover:bg-status-rejected/90 disabled:opacity-50"
+            >
+              {actionLoading && state.status === 'clocked-in' ? (
+                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+              ) : (
+                <LogOut className="h-5 w-5 mr-2" />
+              )}
+              Clock Out
+            </Button>
           </div>
         </div>
       </CardContent>
