@@ -48,8 +48,22 @@ export const Auth = () => {
     }
   };
 
-  // Only redirect if user exists AND profile is loaded (or loading is complete)
-  if (user && !loading && profile) {
+  // Show loading while auth is initializing
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Users className="h-8 w-8 text-primary-foreground" />
+          </div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Only redirect if user exists AND profile is loaded
+  if (user && profile) {
     return <Navigate to="/" replace />;
   }
 
@@ -135,18 +149,6 @@ export const Auth = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Users className="h-8 w-8 text-primary-foreground" />
-          </div>
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
