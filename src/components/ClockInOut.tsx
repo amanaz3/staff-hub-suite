@@ -266,79 +266,118 @@ export const ClockInOut = ({ userProfile }: ClockInOutProps) => {
   const statusDisplay = getStatusDisplay();
 
   return (
-    <Card className="border-2 border-primary/20 bg-gradient-to-r from-primary/5 to-primary-glow/5">
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between">
-          <div className="flex-1">
-            <div className="flex items-center gap-3 mb-2">
-              <h3 className="text-lg font-semibold text-foreground">
-                Today's Attendance
-              </h3>
-              <Badge className={statusDisplay.badge}>
-                {statusDisplay.text}
-              </Badge>
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+      {/* Today's Clock Section */}
+      <div className="lg:col-span-2">
+        <Card className="p-6 shadow-lg">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-semibold text-foreground">Today's clock</h2>
+            <div className="text-right">
+              <div className="text-sm text-muted-foreground">Total work hours today</div>
+              <div className="text-xl font-semibold">
+                {state.totalHours ? `${state.totalHours.toFixed(2)}:00` : '00:00'}
+              </div>
             </div>
-            <p className="text-muted-foreground mb-2">
-              {statusDisplay.description}
-            </p>
+          </div>
+
+          <div className="flex flex-col items-center justify-center py-8">
+            {state.status === 'not-clocked-in' && (
+              <div className="text-center mb-8">
+                <p className="text-muted-foreground mb-6">Nothing's scheduled for today</p>
+              </div>
+            )}
             
-            {/* Show times when available */}
+            {/* Large Circular Clock Button */}
+            <div className="relative">
+              <div className="w-48 h-48 bg-gradient-to-br from-primary to-primary-light rounded-full flex items-center justify-center shadow-xl hover:shadow-2xl transition-all duration-300 cursor-pointer group"
+                   onClick={state.status === 'not-clocked-in' ? handleClockIn : handleClockOut}>
+                <div className="text-center text-white">
+                  {actionLoading ? (
+                    <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
+                  ) : (
+                    <Clock className="h-8 w-8 mx-auto mb-2" />
+                  )}
+                  <div className="text-lg font-semibold">
+                    {state.status === 'not-clocked-in' ? 'Clock in' : 
+                     state.status === 'clocked-in' ? 'Clock out' : 'Completed'}
+                  </div>
+                  {state.status === 'clocked-in' && state.clockInTime && (
+                    <div className="text-sm opacity-90 mt-1">
+                      Started: {format(new Date(state.clockInTime), 'HH:mm')}
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              {/* Status indicator */}
+              {state.status !== 'not-clocked-in' && (
+                <div className="absolute -bottom-2 -right-2">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-medium ${
+                    state.status === 'clocked-in' ? 'bg-success' : 'bg-primary'
+                  }`}>
+                    {state.status === 'clocked-in' ? '✓' : '⏹'}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Time Details */}
             {(state.clockInTime || state.clockOutTime) && (
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              <div className="mt-8 flex items-center gap-6 text-sm text-muted-foreground">
                 {state.clockInTime && (
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-2">
                     <LogIn className="h-4 w-4" />
-                    In: {format(new Date(state.clockInTime), 'HH:mm')}
+                    <span>In: {format(new Date(state.clockInTime), 'HH:mm')}</span>
                   </div>
                 )}
                 {state.clockOutTime && (
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-2">
                     <LogOut className="h-4 w-4" />
-                    Out: {format(new Date(state.clockOutTime), 'HH:mm')}
-                  </div>
-                )}
-                {state.totalHours && (
-                  <div className="flex items-center gap-1">
-                    <Clock className="h-4 w-4" />
-                    {state.totalHours.toFixed(2)}h
+                    <span>Out: {format(new Date(state.clockOutTime), 'HH:mm')}</span>
                   </div>
                 )}
               </div>
             )}
           </div>
+        </Card>
+      </div>
+
+      {/* Requests Section */}
+      <div>
+        <Card className="p-6 shadow-lg">
+          <h3 className="text-xl font-semibold text-foreground mb-6">Requests</h3>
           
-          
-          <div className="flex gap-3">
+          <div className="space-y-4">
             <Button 
-              onClick={handleClockIn}
+              variant="outline" 
+              className="w-full justify-start h-12 border-primary/20 hover:bg-primary/5"
               size="lg"
-              disabled={actionLoading || state.status !== 'not-clocked-in'}
-              className="bg-status-present hover:bg-status-present/90 disabled:opacity-50"
             >
-              {actionLoading && state.status === 'not-clocked-in' ? (
-                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-              ) : (
-                <LogIn className="h-5 w-5 mr-2" />
-              )}
-              Clock In
+              <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center mr-3">
+                <div className="text-primary text-lg">+</div>
+              </div>
+              Add a shift request
             </Button>
             
             <Button 
-              onClick={handleClockOut}
+              variant="outline" 
+              className="w-full justify-start h-12 border-secondary/20 hover:bg-secondary/5"
               size="lg"
-              disabled={actionLoading || state.status !== 'clocked-in'}
-              className="bg-status-rejected hover:bg-status-rejected/90 disabled:opacity-50"
             >
-              {actionLoading && state.status === 'clocked-in' ? (
-                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-              ) : (
-                <LogOut className="h-5 w-5 mr-2" />
-              )}
-              Clock Out
+              <div className="w-8 h-8 bg-secondary/10 rounded-full flex items-center justify-center mr-3">
+                <div className="text-secondary text-lg">+</div>
+              </div>
+              Add an absence request
             </Button>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+
+          <div className="mt-8 pt-6 border-t">
+            <Button variant="link" className="text-primary p-0 h-auto font-normal">
+              View your requests
+            </Button>
+          </div>
+        </Card>
+      </div>
+    </div>
   );
 };
