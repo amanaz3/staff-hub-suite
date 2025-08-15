@@ -5,81 +5,81 @@
 /* Modern HR Management System Design Tokens */
 @layer base {
   :root {
-    /* Base colors - Deep navy blue and white theme */
-    --background: 0 0% 100%;
-    --foreground: 220 60% 15%;
+    /* Base colors - Clean Professional Theme */
+    --background: 0 0% 98%;
+    --foreground: 210 11% 15%;
     --surface: 0 0% 100%;
-    --surface-subtle: 220 20% 98%;
+    --surface-subtle: 210 20% 97%;
 
     /* Card system */
     --card: 0 0% 100%;
-    --card-foreground: 220 60% 15%;
-    --card-border: 220 15% 92%;
+    --card-foreground: 210 11% 15%;
+    --card-border: 210 20% 90%;
 
     /* Interactive elements */
     --popover: 0 0% 100%;
-    --popover-foreground: 220 60% 15%;
+    --popover-foreground: 210 11% 15%;
 
-    /* Brand colors - Deep navy blue primary */
-    --primary: 220 60% 15%;
+    /* Brand colors - Bright refreshing blue primary */
+    --primary: 217 78% 51%;
     --primary-foreground: 0 0% 100%;
-    --primary-light: 220 40% 35%;
-    --primary-dark: 220 80% 10%;
+    --primary-light: 217 78% 65%;
+    --primary-dark: 217 78% 35%;
 
-    /* Secondary palette - Light purple tones */
-    --secondary: 260 15% 96%;
-    --secondary-foreground: 220 60% 15%;
+    /* Secondary palette - Light green for secondary actions */
+    --secondary: 142 69% 58%;
+    --secondary-foreground: 0 0% 100%;
 
     /* Neutral system */
-    --muted: 220 15% 96%;
-    --muted-foreground: 220 25% 55%;
-    --accent: 270 85% 60%;
+    --muted: 210 20% 95%;
+    --muted-foreground: 215 16% 46%;
+    --accent: 217 78% 51%;
     --accent-foreground: 0 0% 100%;
 
-    /* Status system with purple/blue accents */
-    --success: 150 70% 40%;
+    /* Status system with green and blue accents */
+    --success: 142 69% 58%;
     --success-foreground: 0 0% 100%;
-    --success-light: 150 60% 95%;
+    --success-light: 142 69% 95%;
     
-    --warning: 40 95% 55%;
-    --warning-foreground: 0 0% 100%;
-    --warning-light: 40 85% 95%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 210 11% 15%;
+    --warning-light: 38 92% 95%;
     
-    --destructive: 0 85% 60%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --destructive-light: 0 85% 95%;
+    --destructive-light: 0 93% 94%;
 
     /* Interactive states */
-    --border: 220 15% 92%;
-    --input: 220 15% 94%;
-    --ring: 270 85% 60%;
-    --focus-ring: 270 85% 60%;
+    --border: 210 20% 90%;
+    --input: 210 20% 90%;
+    --ring: 217 78% 51%;
+    --focus-ring: 217 78% 51%;
 
-    /* HR-specific status colors with purple/blue theme */
-    --status-approved: 150 70% 40%;
-    --status-pending: 270 85% 60%;
-    --status-rejected: 0 85% 60%;
-    --status-absent: 0 85% 60%;
-    --status-present: 150 70% 40%;
-    --status-late: 40 95% 55%;
+    /* HR-specific status colors aligned with theme */
+    --status-approved: 142 69% 58%;
+    --status-pending: 217 78% 51%;
+    --status-rejected: 0 84% 60%;
+    --status-absent: 0 84% 60%;
+    --status-present: 142 69% 58%;
+    --status-late: 38 92% 50%;
 
     /* Light variants for backgrounds */
-    --status-approved-light: 150 60% 95%;
-    --status-pending-light: 270 60% 95%;
-    --status-rejected-light: 0 85% 95%;
+    --status-approved-light: 142 69% 95%;
+    --status-pending-light: 217 78% 95%;
+    --status-rejected-light: 0 93% 94%;
 
-    /* Elevation system */
-    --shadow-sm: 0 1px 2px 0 hsl(215 25% 15% / 0.05);
-    --shadow-md: 0 4px 6px -1px hsl(215 25% 15% / 0.1), 0 2px 4px -1px hsl(215 25% 15% / 0.06);
-    --shadow-lg: 0 10px 15px -3px hsl(215 25% 15% / 0.1), 0 4px 6px -2px hsl(215 25% 15% / 0.05);
-    --shadow-xl: 0 20px 25px -5px hsl(215 25% 15% / 0.1), 0 10px 10px -5px hsl(215 25% 15% / 0.04);
+    /* Elevation system with subtle shadows */
+    --shadow-sm: 0 1px 2px 0 hsl(210 11% 15% / 0.05);
+    --shadow-md: 0 4px 6px -1px hsl(210 11% 15% / 0.1), 0 2px 4px -1px hsl(210 11% 15% / 0.06);
+    --shadow-lg: 0 10px 15px -3px hsl(210 11% 15% / 0.1), 0 4px 6px -2px hsl(210 11% 15% / 0.05);
+    --shadow-xl: 0 20px 25px -5px hsl(210 11% 15% / 0.1), 0 10px 10px -5px hsl(210 11% 15% / 0.04);
 
-    /* Gradients with navy and purple theme */
-    --gradient-primary: linear-gradient(135deg, hsl(220 60% 15%), hsl(220 40% 35%));
-    --gradient-success: linear-gradient(135deg, hsl(150 70% 40%), hsl(150 70% 50%));
-    --gradient-surface: linear-gradient(135deg, hsl(0 0% 100%), hsl(220 20% 98%));
-    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(220 15% 99%));
-    --gradient-accent: linear-gradient(135deg, hsl(270 85% 60%), hsl(270 75% 70%));
+    /* Gradients with clean blue and green theme */
+    --gradient-primary: linear-gradient(135deg, hsl(217 78% 51%), hsl(217 78% 65%));
+    --gradient-success: linear-gradient(135deg, hsl(142 69% 58%), hsl(142 69% 68%));
+    --gradient-surface: linear-gradient(135deg, hsl(0 0% 100%), hsl(210 20% 97%));
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(210 20% 99%));
+    --gradient-accent: linear-gradient(135deg, hsl(217 78% 51%), hsl(217 78% 65%));
 
     /* Typography scale */
     --font-size-xs: 0.75rem;
@@ -106,15 +106,15 @@
     --radius-lg: 1rem;
     --radius-xl: 1.5rem;
 
-    /* Sidebar system with navy theme */
-    --sidebar-background: 220 20% 98%;
-    --sidebar-foreground: 220 60% 15%;
-    --sidebar-primary: 220 60% 15%;
+    /* Sidebar system with clean theme */
+    --sidebar-background: 210 20% 97%;
+    --sidebar-foreground: 210 11% 15%;
+    --sidebar-primary: 217 78% 51%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 270 20% 95%;
-    --sidebar-accent-foreground: 220 60% 15%;
-    --sidebar-border: 220 15% 92%;
-    --sidebar-ring: 270 85% 60%;
+    --sidebar-accent: 210 20% 95%;
+    --sidebar-accent-foreground: 210 11% 15%;
+    --sidebar-border: 210 20% 90%;
+    --sidebar-ring: 217 78% 51%;
 
     /* Animation timing */
     --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
