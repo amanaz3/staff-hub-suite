@@ -22,12 +22,16 @@ export default {
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
 				ring: 'hsl(var(--ring))',
+				'focus-ring': 'hsl(var(--focus-ring))',
 				background: 'hsl(var(--background))',
 				foreground: 'hsl(var(--foreground))',
+				surface: 'hsl(var(--surface))',
+				'surface-subtle': 'hsl(var(--surface-subtle))',
 				primary: {
 					DEFAULT: 'hsl(var(--primary))',
 					foreground: 'hsl(var(--primary-foreground))',
-					glow: 'hsl(var(--primary-glow))'
+					light: 'hsl(var(--primary-light))',
+					dark: 'hsl(var(--primary-dark))'
 				},
 				secondary: {
 					DEFAULT: 'hsl(var(--secondary))',
@@ -35,7 +39,8 @@ export default {
 				},
 				destructive: {
 					DEFAULT: 'hsl(var(--destructive))',
-					foreground: 'hsl(var(--destructive-foreground))'
+					foreground: 'hsl(var(--destructive-foreground))',
+					light: 'hsl(var(--destructive-light))'
 				},
 				muted: {
 					DEFAULT: 'hsl(var(--muted))',
@@ -51,23 +56,29 @@ export default {
 				},
 				card: {
 					DEFAULT: 'hsl(var(--card))',
-					foreground: 'hsl(var(--card-foreground))'
+					foreground: 'hsl(var(--card-foreground))',
+					border: 'hsl(var(--card-border))'
 				},
 				success: {
 					DEFAULT: 'hsl(var(--success))',
-					foreground: 'hsl(var(--success-foreground))'
+					foreground: 'hsl(var(--success-foreground))',
+					light: 'hsl(var(--success-light))'
 				},
 				warning: {
 					DEFAULT: 'hsl(var(--warning))',
-					foreground: 'hsl(var(--warning-foreground))'
+					foreground: 'hsl(var(--warning-foreground))',
+					light: 'hsl(var(--warning-light))'
 				},
 				status: {
-					approved: 'hsl(var(--approved))',
-					pending: 'hsl(var(--pending))',
-					rejected: 'hsl(var(--rejected))',
-					absent: 'hsl(var(--absent))',
-					present: 'hsl(var(--present))',
-					late: 'hsl(var(--late))'
+					approved: 'hsl(var(--status-approved))',
+					pending: 'hsl(var(--status-pending))',
+					rejected: 'hsl(var(--status-rejected))',
+					absent: 'hsl(var(--status-absent))',
+					present: 'hsl(var(--status-present))',
+					late: 'hsl(var(--status-late))',
+					'approved-light': 'hsl(var(--status-approved-light))',
+					'pending-light': 'hsl(var(--status-pending-light))',
+					'rejected-light': 'hsl(var(--status-rejected-light))'
 				},
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
