@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { EnhancedCard } from "@/components/ui/enhanced-card";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ClockInOut } from "@/components/ClockInOut";
@@ -10,11 +11,15 @@ import {
   Clock, 
   LogOut,
   Calendar as CalendarIcon,
-  AlertCircle
+  AlertCircle,
+  Menu,
+  TrendingUp,
+  Activity
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface DashboardProps {
   userRole: 'admin' | 'staff';
@@ -29,6 +34,7 @@ interface DashboardProps {
     full_name: string;
   };
   onLogout: () => void;
+  onNavigate?: (tabId: string) => void;
 }
 
 interface TodayAttendance {
@@ -39,7 +45,7 @@ interface TodayAttendance {
   status: string;
 }
 
-export const Dashboard = ({ userRole, currentUser, userProfile, onLogout }: DashboardProps) => {
+export const Dashboard = ({ userRole, currentUser, userProfile, onLogout, onNavigate }: DashboardProps) => {
   const [todayAttendance, setTodayAttendance] = useState<TodayAttendance[]>([]);
   const [loading, setLoading] = useState(true);
   // Get today's date in YYYY-MM-DD format
@@ -140,28 +146,41 @@ export const Dashboard = ({ userRole, currentUser, userProfile, onLogout }: Dash
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b bg-card shadow-sm">
-        <div className="container mx-auto px-6 py-4">
+      <header className="sticky top-0 z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+        <div className="container mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="text-2xl font-bold text-primary">HRFlow</div>
-              <Badge variant="outline" className="text-sm">
-                {userRole === 'admin' ? 'Administrator' : 'Staff Member'}
-              </Badge>
+            <div className="flex items-center gap-4">
+              {onNavigate && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {/* Mobile menu handled in Index */}}
+                  className="lg:hidden"
+                  aria-label="Open menu"
+                >
+                  <Menu className="h-5 w-5" />
+                </Button>
+              )}
+              <div className="flex items-center gap-3">
+                <div className="text-2xl font-bold text-primary">HRFlow</div>
+                <Badge variant="outline" className="text-sm hidden sm:inline-flex">
+                  {userRole === 'admin' ? 'Administrator' : 'Staff Member'}
+                </Badge>
+              </div>
             </div>
             
-            <div className="flex items-center space-x-4">
-              <div className="text-right">
+            <div className="flex items-center gap-4">
+              <div className="text-right hidden sm:block">
                 <div className="font-medium text-foreground">{currentUser.name}</div>
                 <div className="text-sm text-muted-foreground">{currentUser.email}</div>
               </div>
-              <Avatar>
+              <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
                 <AvatarImage src={currentUser.avatar} />
                 <AvatarFallback className="bg-primary text-primary-foreground">
                   {currentUser.name.split(' ').map(n => n[0]).join('')}
                 </AvatarFallback>
               </Avatar>
-              <Button variant="outline" onClick={onLogout} size="sm">
+              <Button variant="outline" onClick={onLogout} size="sm" className="hidden sm:flex">
                 <LogOut className="h-4 w-4 mr-2" />
                 Logout
               </Button>
@@ -170,7 +189,7 @@ export const Dashboard = ({ userRole, currentUser, userProfile, onLogout }: Dash
         </div>
       </header>
 
-      <div className="container mx-auto px-6 py-8">
+      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {/* Clock In/Out for Staff */}
         {userRole === 'staff' && (
           <div className="mb-8">
@@ -180,120 +199,116 @@ export const Dashboard = ({ userRole, currentUser, userProfile, onLogout }: Dash
 
         {/* Dashboard Stats (Admin only) */}
         {userRole === 'admin' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <Card className="hover:shadow-lg transition-all duration-200">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Total Staff
-                </CardTitle>
-                <Users className="h-5 w-5 text-primary" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-foreground">{dashboardData.totalStaff}</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Active employees
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="hover:shadow-lg transition-all duration-200">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Present Today
-                </CardTitle>
-                <UserCheck className="h-5 w-5 text-status-present" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-foreground">{dashboardData.loggedInToday}</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Out of {dashboardData.totalStaff} total
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="hover:shadow-lg transition-all duration-200">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  On Leave Today
-                </CardTitle>
-                <Calendar className="h-5 w-5 text-status-pending" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-foreground">{dashboardData.onLeaveToday}</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Approved absences
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="hover:shadow-lg transition-all duration-200">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {userRole === 'admin' ? 'Pending Requests' : 'My Leave Balance'}
-                </CardTitle>
-                <Clock className="h-5 w-5 text-status-pending" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-foreground">
-                  {userRole === 'admin' ? dashboardData.pendingRequests : '12'}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+            <EnhancedCard
+              variant="elevated"
+              className="group hover:border-primary/20 transition-all duration-200"
+            >
+              <div className="flex items-center justify-between">
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-muted-foreground">Total Staff</p>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-bold">{dashboardData.totalStaff}</span>
+                    <TrendingUp className="h-4 w-4 text-success" />
+                  </div>
+                  <p className="text-xs text-muted-foreground">Active employees</p>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {userRole === 'admin' ? 'Awaiting approval' : 'Days remaining'}
-                </p>
-              </CardContent>
-            </Card>
+                <div className="p-3 bg-primary/10 rounded-xl group-hover:bg-primary/20 transition-colors">
+                  <Users className="h-6 w-6 text-primary" />
+                </div>
+              </div>
+            </EnhancedCard>
+
+            <EnhancedCard
+              variant="elevated"
+              className="group hover:border-success/20 transition-all duration-200"
+            >
+              <div className="flex items-center justify-between">
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-muted-foreground">Present Today</p>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-bold">{dashboardData.loggedInToday}</span>
+                    <span className="text-sm text-muted-foreground">/{dashboardData.totalStaff}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {Math.round((dashboardData.loggedInToday / dashboardData.totalStaff) * 100)}% attendance
+                  </p>
+                </div>
+                <div className="p-3 bg-success/10 rounded-xl group-hover:bg-success/20 transition-colors">
+                  <UserCheck className="h-6 w-6 text-success" />
+                </div>
+              </div>
+            </EnhancedCard>
+
+            <EnhancedCard
+              variant="elevated"
+              className="group hover:border-warning/20 transition-all duration-200"
+            >
+              <div className="flex items-center justify-between">
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-muted-foreground">On Leave</p>
+                  <span className="text-3xl font-bold">{dashboardData.onLeaveToday}</span>
+                  <p className="text-xs text-muted-foreground">Approved absences</p>
+                </div>
+                <div className="p-3 bg-warning/10 rounded-xl group-hover:bg-warning/20 transition-colors">
+                  <Calendar className="h-6 w-6 text-warning" />
+                </div>
+              </div>
+            </EnhancedCard>
+
+            <EnhancedCard
+              variant="elevated"
+              className="group hover:border-destructive/20 transition-all duration-200"
+            >
+              <div className="flex items-center justify-between">
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-muted-foreground">
+                    {userRole === 'admin' ? 'Pending Requests' : 'Leave Balance'}
+                  </p>
+                  <span className="text-3xl font-bold">
+                    {userRole === 'admin' ? dashboardData.pendingRequests : '12'}
+                  </span>
+                  <p className="text-xs text-muted-foreground">
+                    {userRole === 'admin' ? 'Awaiting approval' : 'Days remaining'}
+                  </p>
+                </div>
+                <div className="p-3 bg-destructive/10 rounded-xl group-hover:bg-destructive/20 transition-colors">
+                  <Clock className="h-6 w-6 text-destructive" />
+                </div>
+              </div>
+            </EnhancedCard>
           </div>
         )}
 
-        <div className={`grid grid-cols-1 ${userRole === 'admin' ? 'lg:grid-cols-2' : ''} gap-8`}>
+        <div className={`grid grid-cols-1 ${userRole === 'admin' ? 'lg:grid-cols-2' : ''} gap-6 sm:gap-8`}>
           {/* Today's Attendance */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center text-lg">
-                <UserCheck className="h-5 w-5 mr-2 text-primary" />
-                Today's Attendance
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="space-y-4">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="flex items-center justify-between p-3 rounded-lg border bg-muted/20 animate-pulse">
-                      <div className="flex items-center space-x-3">
-                        <div className="h-8 w-8 rounded-full bg-muted"></div>
-                        <div>
-                          <div className="h-4 w-24 bg-muted rounded mb-1"></div>
-                          <div className="h-3 w-16 bg-muted rounded"></div>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-3">
-                        <div className="h-4 w-12 bg-muted rounded"></div>
-                        <div className="h-6 w-16 bg-muted rounded"></div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : todayAttendance.length > 0 ? (
-                <div className="space-y-4">
+          <EnhancedCard
+            title="Today's Attendance"
+            icon={Activity}
+            variant="elevated"
+            loading={loading}
+          >
+              {!loading && todayAttendance.length > 0 ? (
+                <div className="space-y-3">
                   {todayAttendance.map((record, index) => {
                     const status = getAttendanceStatus(record);
                     return (
-                      <div key={index} className="flex items-center justify-between p-3 rounded-lg border bg-muted/20">
-                        <div className="flex items-center space-x-3">
-                          <Avatar className="h-8 w-8">
-                            <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                      <div key={index} className="flex items-center justify-between p-4 rounded-lg border bg-surface hover:bg-surface-subtle transition-colors">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-10 w-10">
+                            <AvatarFallback className="text-sm bg-primary/10 text-primary font-medium">
                               {record.employee_name.split(' ').map(n => n[0]).join('')}
                             </AvatarFallback>
                           </Avatar>
-                          <div>
-                            <div className="font-medium text-sm">{record.employee_name}</div>
-                            <div className="text-xs text-muted-foreground">{record.department}</div>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium text-sm text-foreground">{record.employee_name}</p>
+                            <p className="text-xs text-muted-foreground">{record.department}</p>
                           </div>
                         </div>
-                        <div className="flex items-center space-x-3">
+                        <div className="flex items-center gap-3">
                           <div className="text-right">
-                            <div className="text-sm font-mono">
-                              {record.clock_in_time ? format(new Date(record.clock_in_time), 'HH:mm') : '-'}
+                            <div className="text-sm font-mono tabular-nums">
+                              {record.clock_in_time ? format(new Date(record.clock_in_time), 'HH:mm') : '--:--'}
                             </div>
                             {record.clock_out_time && (
                               <div className="text-xs text-muted-foreground">
@@ -301,77 +316,92 @@ export const Dashboard = ({ userRole, currentUser, userProfile, onLogout }: Dash
                               </div>
                             )}
                           </div>
-                          <Badge className={getStatusBadge(status)}>
+                          <StatusBadge variant={status as any}>
                             {status}
-                          </Badge>
+                          </StatusBadge>
                         </div>
                       </div>
                     );
                   })}
                 </div>
               ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <UserCheck className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p>No attendance records for today</p>
+                <div className="text-center py-12">
+                  <UserCheck className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                  <p className="text-muted-foreground">No attendance records for today</p>
+                  <p className="text-sm text-muted-foreground/70 mt-1">
+                    Attendance data will appear here once staff clock in
+                  </p>
                 </div>
               )}
-            </CardContent>
-          </Card>
+          </EnhancedCard>
 
           {/* Upcoming Leaves (Admin only) */}
           {userRole === 'admin' && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center text-lg">
-                  <CalendarIcon className="h-5 w-5 mr-2 text-primary" />
-                  Upcoming Leaves
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
+            <EnhancedCard
+              title="Upcoming Leaves"
+              subtitle="Approved leave requests coming up"
+              icon={CalendarIcon}
+              variant="elevated"
+            >
+                <div className="space-y-3">
                   {dashboardData.upcomingLeaves.map((leave, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 rounded-lg border bg-muted/20">
-                      <div className="flex items-center space-x-3">
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                    <div key={index} className="flex items-center justify-between p-4 rounded-lg border bg-surface hover:bg-surface-subtle transition-colors">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-10 w-10">
+                          <AvatarFallback className="text-sm bg-primary/10 text-primary font-medium">
                             {leave.name.split(' ').map(n => n[0]).join('')}
                           </AvatarFallback>
                         </Avatar>
-                        <div>
-                          <div className="font-medium text-sm">{leave.name}</div>
-                          <div className="text-xs text-muted-foreground">{leave.department}</div>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-sm text-foreground">{leave.name}</p>
+                          <p className="text-xs text-muted-foreground">{leave.department}</p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-sm font-medium">{leave.dates}</div>
-                        <Badge variant="outline" className="text-xs">
+                        <p className="text-sm font-medium">{leave.dates}</p>
+                        <StatusBadge variant="pending" className="mt-1">
                           {leave.type}
-                        </Badge>
+                        </StatusBadge>
                       </div>
                     </div>
                   ))}
                 </div>
-              </CardContent>
-            </Card>
+            </EnhancedCard>
           )}
         </div>
 
         {/* Alerts for Admin */}
         {userRole === 'admin' && dashboardData.lateCheckIns > 0 && (
-          <Card className="mt-8 border-status-pending/50 bg-status-pending/5">
-            <CardHeader>
-              <CardTitle className="flex items-center text-lg text-status-pending">
-                <AlertCircle className="h-5 w-5 mr-2" />
-                Attention Required
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm">
-                {dashboardData.lateCheckIns} staff members had late check-ins today. 
-                Consider following up for attendance policy compliance.
-              </p>
-            </CardContent>
-          </Card>
+          <EnhancedCard
+            title="Attention Required"
+            icon={AlertCircle}
+            variant="elevated"
+            className="mt-8 border-warning/50 bg-warning/5"
+          >
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-warning/10 rounded-lg">
+                <AlertCircle className="h-5 w-5 text-warning" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm text-foreground font-medium mb-1">
+                  {dashboardData.lateCheckIns} staff members had late check-ins today
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Consider following up for attendance policy compliance.
+                </p>
+                {onNavigate && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => onNavigate('leaves')}
+                    className="mt-3"
+                  >
+                    Review Attendance
+                  </Button>
+                )}
+              </div>
+            </div>
+          </EnhancedCard>
         )}
       </div>
     </div>

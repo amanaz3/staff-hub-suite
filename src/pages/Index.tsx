@@ -3,13 +3,16 @@ import { Navigate } from "react-router-dom";
 import { Dashboard } from "@/components/Dashboard";
 import { AdminDashboard } from "@/components/AdminDashboard";
 import { LeaveManagement } from "@/components/LeaveManagement";
+import { Navigation, Breadcrumb } from "@/components/ui/navigation";
 import { Button } from "@/components/ui/button";
-import { Users, Calendar, Settings, BarChart } from "lucide-react";
+import { Users, Calendar, Settings, BarChart, Menu, X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { cn } from "@/lib/utils";
 
 const Index = () => {
   const { user, profile, loading, signOut } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   if (loading) {
     return (
@@ -47,110 +50,181 @@ const Index = () => {
     { id: 'dashboard', label: 'Dashboard', icon: BarChart },
     { id: 'leaves', label: 'Leave Management', icon: Calendar },
     ...(profile?.role === 'admin' ? [
-      { id: 'staff', label: 'Staff Directory', icon: Users },
+      { id: 'staff', label: 'Staff Directory', icon: Users, badge: '24' },
       { id: 'settings', label: 'Settings', icon: Settings }
     ] : [])
   ];
 
+  const breadcrumbItems = [
+    { label: 'HRFlow' },
+    { label: navigationItems.find(item => item.id === activeTab)?.label || 'Dashboard' }
+  ];
+
+  const handleNavigationClick = (itemId: string) => {
+    setActiveTab(itemId);
+    setSidebarOpen(false); // Close mobile sidebar on navigation
+  };
+
   return (
     <div className="min-h-screen bg-background">
-      {activeTab === 'dashboard' && (
-        <Dashboard 
-          userRole={profile.role} 
-          currentUser={{
-            name: profile.full_name || profile.email.split('@')[0],
-            email: profile.email,
-            avatar: profile.avatar_url
-          }}
-          userProfile={{
-            user_id: profile.user_id,
-            email: profile.email,
-            full_name: profile.full_name || profile.email.split('@')[0]
-          }}
-          onLogout={signOut}
+      {/* Mobile sidebar overlay */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
         />
       )}
 
-      {activeTab !== 'dashboard' && (
-        <>
-          {/* Header for other pages */}
-          <header className="border-b bg-card shadow-sm">
-            <div className="container mx-auto px-6 py-4">
+      {/* Sidebar */}
+      <aside className={cn(
+        "fixed left-0 top-0 h-full w-64 bg-card border-r border-border z-50 transform transition-transform duration-300 ease-in-out",
+        "lg:translate-x-0",
+        sidebarOpen ? "translate-x-0" : "-translate-x-full"
+      )}>
+        <div className="flex flex-col h-full">
+          {/* Sidebar header */}
+          <div className="flex items-center justify-between p-6 border-b">
+            <div className="text-2xl font-bold text-primary">HRFlow</div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setSidebarOpen(false)}
+              className="lg:hidden"
+              aria-label="Close sidebar"
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
+
+          {/* Navigation */}
+          <div className="flex-1 p-6">
+            <Navigation
+              items={navigationItems}
+              activeItem={activeTab}
+              onItemClick={handleNavigationClick}
+            />
+          </div>
+
+          {/* User info */}
+          <div className="p-6 border-t">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="h-8 w-8 bg-primary rounded-full flex items-center justify-center">
+                <span className="text-primary-foreground text-sm font-medium">
+                  {(profile?.full_name || profile?.email)?.charAt(0).toUpperCase()}
+                </span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">
+                  {profile?.full_name || profile?.email?.split('@')[0]}
+                </p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {profile?.role === 'admin' ? 'Administrator' : 'Staff Member'}
+                </p>
+              </div>
+            </div>
+            <Button 
+              variant="outline" 
+              onClick={signOut} 
+              size="sm" 
+              className="w-full"
+            >
+              Sign Out
+            </Button>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main content */}
+      <div className="lg:ml-64">
+        {activeTab !== 'dashboard' && (
+          <header className="sticky top-0 z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+            <div className="container mx-auto px-4 sm:px-6 py-4">
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <div className="text-2xl font-bold text-primary">HRFlow</div>
+                <div className="flex items-center gap-4">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setSidebarOpen(true)}
+                    className="lg:hidden"
+                    aria-label="Open sidebar"
+                  >
+                    <Menu className="h-5 w-5" />
+                  </Button>
+                  <Breadcrumb items={breadcrumbItems} />
                 </div>
-                <Button variant="outline" onClick={signOut} size="sm">
-                  Logout
-                </Button>
               </div>
             </div>
           </header>
+        )}
 
-          <div className="container mx-auto px-6 py-8">
-            {activeTab === 'leaves' && <AdminDashboard userRole={profile.role} />}
-            {activeTab === 'staff' && (
+        <main className={cn(
+          "min-h-screen",
+          activeTab !== 'dashboard' && "pb-20 lg:pb-8"
+        )}>
+          {activeTab === 'dashboard' && (
+            <Dashboard 
+              userRole={profile.role} 
+              currentUser={{
+                name: profile.full_name || profile.email.split('@')[0],
+                email: profile.email,
+                avatar: profile.avatar_url
+              }}
+              userProfile={{
+                user_id: profile.user_id,
+                email: profile.email,
+                full_name: profile.full_name || profile.email.split('@')[0]
+              }}
+              onLogout={signOut}
+              onNavigate={handleNavigationClick}
+            />
+          )}
+
+          {activeTab === 'leaves' && (
+            <div className="container mx-auto px-4 sm:px-6 py-8">
+              <AdminDashboard userRole={profile.role} />
+            </div>
+          )}
+
+          {activeTab === 'staff' && (
+            <div className="container mx-auto px-4 sm:px-6 py-8">
               <div className="text-center py-12">
+                <Users className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
                 <h2 className="text-2xl font-bold mb-4">Staff Directory</h2>
-                <p className="text-muted-foreground">Staff management features coming soon...</p>
+                <p className="text-muted-foreground max-w-md mx-auto">
+                  Comprehensive staff management features are coming soon. 
+                  Manage employee profiles, departments, and organizational structure.
+                </p>
               </div>
-            )}
-            {activeTab === 'settings' && (
+            </div>
+          )}
+
+          {activeTab === 'settings' && (
+            <div className="container mx-auto px-4 sm:px-6 py-8">
               <div className="text-center py-12">
-                <h2 className="text-2xl font-bold mb-4">Settings</h2>
-                <p className="text-muted-foreground">System settings coming soon...</p>
+                <Settings className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+                <h2 className="text-2xl font-bold mb-4">System Settings</h2>
+                <p className="text-muted-foreground max-w-md mx-auto">
+                  Configure system preferences, security settings, and administrative options.
+                </p>
               </div>
-            )}
-          </div>
-        </>
-      )}
+            </div>
+          )}
+        </main>
+      </div>
 
-      {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-card border-t shadow-lg lg:hidden">
-        <div className="flex items-center justify-around py-2">
-          {navigationItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Button
-                key={item.id}
-                variant={activeTab === item.id ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setActiveTab(item.id)}
-                className="flex flex-col h-auto py-2 px-3"
-              >
-                <Icon className="h-4 w-4" />
-                <span className="text-xs mt-1">{item.label}</span>
-              </Button>
-            );
-          })}
+      {/* Mobile bottom navigation */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60 border-t lg:hidden z-30">
+        <div className="container mx-auto px-4">
+          <Navigation
+            items={navigationItems}
+            activeItem={activeTab}
+            onItemClick={handleNavigationClick}
+            orientation="horizontal"
+            className="flex flex-row space-y-0 space-x-0 py-2"
+          />
         </div>
       </nav>
-
-      {/* Desktop Sidebar Navigation */}
-      <nav className="hidden lg:fixed lg:left-0 lg:top-0 lg:h-full lg:w-64 lg:bg-card lg:border-r lg:flex lg:flex-col lg:z-50">
-        <div className="p-6">
-          <div className="text-2xl font-bold text-primary mb-8">HRFlow</div>
-          <div className="space-y-2">
-            {navigationItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Button
-                  key={item.id}
-                  variant={activeTab === item.id ? "default" : "ghost"}
-                  onClick={() => setActiveTab(item.id)}
-                  className="w-full justify-start"
-                >
-                  <Icon className="h-4 w-4 mr-3" />
-                  {item.label}
-                </Button>
-              );
-            })}
-          </div>
-        </div>
-      </nav>
-
-      {/* Spacer for desktop sidebar */}
-      <div className="hidden lg:block lg:w-64"></div>
     </div>
   );
 };
