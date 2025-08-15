@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { EnhancedCard } from "@/components/ui/enhanced-card";
-import { Card } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -193,135 +192,9 @@ export const Dashboard = ({ userRole, currentUser, userProfile, onLogout, onNavi
       <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {/* Clock In/Out for Staff */}
         {userRole === 'staff' && (
-          <>
+          <div className="mb-8">
             <ClockInOut userProfile={userProfile} />
-            
-            {/* Timesheet Section */}
-            <Card className="shadow-lg">
-              <div className="p-6 border-b">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xl font-semibold text-foreground">Timesheet</h3>
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <span>01/08</span>
-                      <span>to</span>
-                      <span>31/08</span>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm">Select empty days</Button>
-                      <Button variant="outline" size="sm">Export</Button>
-                      <Button size="sm" className="bg-primary hover:bg-primary/90">Submit timesheet</Button>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Timesheet Stats */}
-                <div className="flex items-center gap-8 mt-4 text-sm">
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl font-bold">00:00</span>
-                    <span className="text-muted-foreground">Regular</span>
-                  </div>
-                  <div className="text-muted-foreground">+</div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl font-bold">00:00</span>
-                    <span className="text-muted-foreground">Paid time off</span>
-                  </div>
-                  <div className="text-muted-foreground">=</div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl font-bold">00:00</span>
-                    <span className="text-muted-foreground">Total Paid Hours</span>
-                  </div>
-                  <div className="ml-auto flex items-center gap-2">
-                    <span className="text-2xl font-bold">00:00</span>
-                    <span className="text-muted-foreground">Unpaid time off</span>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Timesheet Table */}
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-surface-subtle">
-                    <tr className="text-left text-sm text-muted-foreground">
-                      <th className="p-4 w-4"></th>
-                      <th className="p-4">Date</th>
-                      <th className="p-4">Type</th>
-                      <th className="p-4">Job</th>
-                      <th className="p-4">Sub item</th>
-                      <th className="p-4">Start</th>
-                      <th className="p-4">End</th>
-                      <th className="p-4">Total hours</th>
-                      <th className="p-4">Daily total</th>
-                      <th className="p-4">Weekly total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr className="border-t">
-                      <td className="p-4 text-center text-muted-foreground" colSpan={10}>
-                        Aug 25 - Aug 31
-                      </td>
-                    </tr>
-                    <tr className="border-t">
-                      <td className="p-4">
-                        <input type="checkbox" className="rounded border-gray-300" />
-                      </td>
-                      <td className="p-4 text-sm">Sat 30/8</td>
-                      <td className="p-4 text-sm text-muted-foreground">--</td>
-                      <td className="p-4 text-sm text-muted-foreground">--</td>
-                      <td className="p-4 text-sm text-muted-foreground">--</td>
-                      <td className="p-4 text-sm text-muted-foreground">--</td>
-                      <td className="p-4 text-sm text-muted-foreground">--</td>
-                      <td className="p-4 text-sm text-muted-foreground">--</td>
-                      <td className="p-4 text-sm text-muted-foreground">--</td>
-                      <td className="p-4 text-sm text-muted-foreground">--</td>
-                    </tr>
-                    <tr className="border-t">
-                      <td className="p-4">
-                        <input type="checkbox" className="rounded border-gray-300" />
-                      </td>
-                      <td className="p-4 text-sm">Fri 29/8</td>
-                      <td className="p-4 text-sm text-muted-foreground">--</td>
-                      <td className="p-4 text-sm text-muted-foreground">--</td>
-                      <td className="p-4 text-sm text-muted-foreground">--</td>
-                      <td className="p-4 text-sm text-muted-foreground">--</td>
-                      <td className="p-4 text-sm text-muted-foreground">--</td>
-                      <td className="p-4 text-sm text-muted-foreground">--</td>
-                      <td className="p-4 text-sm text-muted-foreground">--</td>
-                      <td className="p-4 text-sm text-muted-foreground">--</td>
-                    </tr>
-                    <tr className="border-t">
-                      <td className="p-4">
-                        <input type="checkbox" className="rounded border-gray-300" />
-                      </td>
-                      <td className="p-4 text-sm">Thu 28/8</td>
-                      <td className="p-4 text-sm text-muted-foreground">--</td>
-                      <td className="p-4 text-sm text-muted-foreground">--</td>
-                      <td className="p-4 text-sm text-muted-foreground">--</td>
-                      <td className="p-4 text-sm text-muted-foreground">--</td>
-                      <td className="p-4 text-sm text-muted-foreground">--</td>
-                      <td className="p-4 text-sm text-muted-foreground">--</td>
-                      <td className="p-4 text-sm text-muted-foreground">--</td>
-                      <td className="p-4 text-sm text-muted-foreground">--</td>
-                    </tr>
-                    <tr className="border-t">
-                      <td className="p-4">
-                        <input type="checkbox" className="rounded border-gray-300" />
-                      </td>
-                      <td className="p-4 text-sm">Wed 27/8</td>
-                      <td className="p-4 text-sm text-muted-foreground">--</td>
-                      <td className="p-4 text-sm text-muted-foreground">--</td>
-                      <td className="p-4 text-sm text-muted-foreground">--</td>
-                      <td className="p-4 text-sm text-muted-foreground">--</td>
-                      <td className="p-4 text-sm text-muted-foreground">--</td>
-                      <td className="p-4 text-sm text-muted-foreground">--</td>
-                      <td className="p-4 text-sm text-muted-foreground">--</td>
-                      <td className="p-4 text-sm text-muted-foreground">--</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </Card>
-          </>
+          </div>
         )}
 
         {/* Dashboard Stats (Admin only) */}
