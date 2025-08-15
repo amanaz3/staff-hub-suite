@@ -1,11 +1,10 @@
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { type LucideIcon } from "lucide-react";
 
 interface NavigationItem {
   id: string;
   label: string;
-  icon: LucideIcon;
+  icon: React.ComponentType<{ className?: string }>;
   href?: string;
   badge?: string | number;
 }

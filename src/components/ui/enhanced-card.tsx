@@ -1,17 +1,16 @@
-import { forwardRef } from "react";
+import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { type LucideIcon } from "lucide-react";
 
 interface EnhancedCardProps extends React.HTMLAttributes<HTMLDivElement> {
   title?: string;
   subtitle?: string;
-  icon?: LucideIcon;
+  icon?: React.ComponentType<{ className?: string }>;
   variant?: 'default' | 'elevated' | 'interactive';
   loading?: boolean;
 }
 
-const EnhancedCard = forwardRef<HTMLDivElement, EnhancedCardProps>(
+const EnhancedCard = React.forwardRef<HTMLDivElement, EnhancedCardProps>(
   ({ className, title, subtitle, icon: Icon, variant = 'default', loading, children, ...props }, ref) => {
     return (
       <Card
