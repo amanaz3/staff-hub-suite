@@ -89,11 +89,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const bootstrapUserIfNeeded = async (user: User) => {
     try {
+      // Check if user already has a profile to avoid overriding admin roles
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      // Only call bootstrap if no profile exists, or preserve existing admin role
+      const preservedRole = existingProfile?.role === 'admin' ? 'admin' : (user.user_metadata?.role || 'staff');
+      
       // Call bootstrap function to ensure profile and employee records exist
       const { error } = await supabase.rpc('bootstrap_user', {
         _email: user.email || '',
         _full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-        _role: user.user_metadata?.role || 'staff',
+        _role: preservedRole,
         _department: user.user_metadata?.department || 'General',
         _position: user.user_metadata?.position || 'Staff'
       });
