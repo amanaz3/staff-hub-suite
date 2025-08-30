@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { ExceptionRequestForm } from "@/components/ExceptionRequestForm";
+import { supabase } from "@/integrations/supabase/client";
 import { Calendar, Plus, Clock, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 
 interface LeaveManagementProps {
@@ -24,8 +25,28 @@ export const LeaveManagement = ({ userRole }: LeaveManagementProps) => {
     endDate: "",
     reason: ""
   });
+  const [employeeId, setEmployeeId] = useState<string>("");
   const { toast } = useToast();
   const { user } = useAuth();
+
+  // Fetch employee ID when user changes
+  useEffect(() => {
+    const fetchEmployeeId = async () => {
+      if (user?.id) {
+        const { data, error } = await supabase
+          .from('employees')
+          .select('id')
+          .eq('user_id', user.id)
+          .single();
+        
+        if (data && !error) {
+          setEmployeeId(data.id);
+        }
+      }
+    };
+    
+    fetchEmployeeId();
+  }, [user]);
 
   // Mock data - would come from backend
   const leaveRequests = [
@@ -285,7 +306,7 @@ export const LeaveManagement = ({ userRole }: LeaveManagementProps) => {
 
               <TabsContent value="exception" className="mt-4">
                 <ExceptionRequestForm 
-                  employeeId={user?.id || ''}
+                  employeeId={employeeId}
                   onSuccess={() => {
                     toast({
                       title: "Exception Request Submitted",

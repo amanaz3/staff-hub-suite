@@ -81,8 +81,8 @@ export const ExceptionRequestForm = ({ attendanceId, employeeId, onSuccess }: Ex
     e.preventDefault();
     if (!exceptionType || !reason.trim()) return;
 
-    // Validation for new exception types
-    if (['missed_clock_in', 'missed_clock_out', 'wrong_time'].includes(exceptionType)) {
+    // Validation for exception types that need date/time
+    if (['late_arrival', 'early_departure', 'missed_clock_in', 'missed_clock_out', 'wrong_time'].includes(exceptionType)) {
       if (!targetDate) {
         toast({
           title: "Error",
@@ -92,7 +92,7 @@ export const ExceptionRequestForm = ({ attendanceId, employeeId, onSuccess }: Ex
         return;
       }
 
-      if (exceptionType === 'missed_clock_in' && !proposedClockIn) {
+      if (['late_arrival', 'missed_clock_in'].includes(exceptionType) && !proposedClockIn) {
         toast({
           title: "Error",
           description: "Proposed clock-in time is required",
@@ -101,7 +101,7 @@ export const ExceptionRequestForm = ({ attendanceId, employeeId, onSuccess }: Ex
         return;
       }
 
-      if (exceptionType === 'missed_clock_out' && !proposedClockOut) {
+      if (['early_departure', 'missed_clock_out'].includes(exceptionType) && !proposedClockOut) {
         toast({
           title: "Error",
           description: "Proposed clock-out time is required",
@@ -196,9 +196,9 @@ export const ExceptionRequestForm = ({ attendanceId, employeeId, onSuccess }: Ex
     setFile(null);
   };
 
-  const needsDateTime = ['missed_clock_in', 'missed_clock_out', 'wrong_time'].includes(exceptionType);
-  const needsClockIn = ['missed_clock_in', 'wrong_time'].includes(exceptionType);
-  const needsClockOut = ['missed_clock_out', 'wrong_time'].includes(exceptionType);
+  const needsDateTime = ['late_arrival', 'early_departure', 'missed_clock_in', 'missed_clock_out', 'wrong_time'].includes(exceptionType);
+  const needsClockIn = ['late_arrival', 'missed_clock_in', 'wrong_time'].includes(exceptionType);
+  const needsClockOut = ['early_departure', 'missed_clock_out', 'wrong_time'].includes(exceptionType);
 
   return (
     <Card>
