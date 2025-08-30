@@ -122,9 +122,26 @@ export const WorkScheduleManagement = () => {
           description: "Work schedule updated successfully"
         });
       } else {
+        // Check if schedule already exists for this employee
+        const { data: existing } = await supabase
+          .from('work_schedules')
+          .select('id')
+          .eq('employee_id', selectedEmployeeId)
+          .eq('is_active', true)
+          .maybeSingle();
+
+        if (existing) {
+          toast({
+            title: "Error",
+            description: "This employee already has an active work schedule",
+            variant: "destructive"
+          });
+          return;
+        }
+
         const { error } = await supabase
           .from('work_schedules')
-          .upsert(scheduleData);
+          .insert(scheduleData);
 
         if (error) throw error;
 

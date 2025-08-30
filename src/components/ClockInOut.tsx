@@ -129,11 +129,22 @@ export const ClockInOut = ({ userProfile }: ClockInOutProps) => {
   }, [userProfile.user_id, today, toast]);
 
   const handleClockIn = async () => {
-    if (!employeeId) return;
+    if (!employeeId) {
+      toast({
+        title: "Error",
+        description: "Employee data not loaded. Please refresh the page.",
+        variant: "destructive"
+      });
+      return;
+    }
     
     setActionLoading(true);
     try {
       const now = new Date().toISOString();
+      
+      // Get user's current IP (in production, this would be server-side)
+      const response = await fetch('https://api.ipify.org?format=json');
+      const { ip } = await response.json();
       
       const { error } = await supabase
         .from('attendance')
@@ -141,7 +152,8 @@ export const ClockInOut = ({ userProfile }: ClockInOutProps) => {
           employee_id: employeeId,
           date: today,
           clock_in_time: now,
-          status: 'present'
+          status: 'present',
+          ip_address: ip
         });
 
       if (error) {
@@ -181,7 +193,16 @@ export const ClockInOut = ({ userProfile }: ClockInOutProps) => {
   };
 
   const handleClockOut = async () => {
-    if (!employeeId || state.status !== 'clocked-in') return;
+    if (!employeeId) {
+      toast({
+        title: "Error",
+        description: "Employee data not loaded. Please refresh the page.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (state.status !== 'clocked-in') return;
     
     setActionLoading(true);
     try {

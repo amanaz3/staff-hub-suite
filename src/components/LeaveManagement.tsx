@@ -60,54 +60,105 @@ export const LeaveManagement = ({ userRole }: LeaveManagementProps) => {
     fetchEmployeeData();
   }, [user]);
 
-  // Mock data - would come from backend
-  const leaveRequests = [
-    {
-      id: 1,
-      employee: "John Smith",
-      department: "Engineering",
-      type: "Annual Leave",
-      startDate: "2024-01-15",
-      endDate: "2024-01-19",
-      days: 5,
-      reason: "Family vacation planned",
-      status: "pending",
-      submittedDate: "2024-01-02"
-    },
-    {
-      id: 2,
-      employee: "Sarah Chen",
-      department: "Marketing",
-      type: "Sick Leave",
-      startDate: "2024-01-08",
-      endDate: "2024-01-10",
-      days: 3,
-      reason: "Medical appointment and recovery",
-      status: "approved",
-      submittedDate: "2024-01-05"
-    },
-    {
-      id: 3,
-      employee: "Mike Johnson",
-      department: "Sales",
-      type: "Personal Leave",
-      startDate: "2024-01-22",
-      endDate: "2024-01-22",
-      days: 1,
-      reason: "Moving to new apartment",
-      status: "rejected",
-      submittedDate: "2024-01-01",
-      rejectionReason: "Insufficient notice period"
-    }
-  ];
+  // Real leave requests data
+  const [leaveRequests, setLeaveRequests] = useState<any[]>([]);
+  const [leaveTypes, setLeaveTypes] = useState<any[]>([]);
+  const [leaveBalances, setLeaveBalances] = useState<any>({
+    annual: { used: 0, total: 0, remaining: 0 },
+    sick: { used: 0, total: 0, remaining: 0 },
+    personal: { used: 0, total: 0, remaining: 0 }
+  });
+  const [loadingRequests, setLoadingRequests] = useState(true);
 
-  const leaveBalances = {
-    annual: { used: 8, total: 25, remaining: 17 },
-    sick: { used: 2, total: 10, remaining: 8 },
-    personal: { used: 1, total: 5, remaining: 4 }
-  };
+  // Fetch leave types and requests
+  useEffect(() => {
+    const fetchLeaveData = async () => {
+      try {
+        // Fetch leave types
+        const { data: types } = await supabase
+          .from('leave_types')
+          .select('*')
+          .eq('is_active', true);
+        setLeaveTypes(types || []);
 
-  const handleSubmitRequest = () => {
+        if (userRole === 'admin') {
+          // Fetch all leave requests for admin
+          const { data: requests } = await supabase
+            .from('leave_requests')
+            .select(`
+              *,
+              employee:employees(full_name, department),
+              leave_type:leave_types(name)
+            `)
+            .order('created_at', { ascending: false });
+          
+          setLeaveRequests(requests || []);
+        } else if (employeeId) {
+          // Fetch staff's own requests and balances
+          const [requestsResult, balancesResult] = await Promise.all([
+            supabase
+              .from('leave_requests')
+              .select(`
+                *,
+                employee:employees(full_name, department),
+                leave_type:leave_types(name)
+              `)
+              .eq('employee_id', employeeId)
+              .order('created_at', { ascending: false }),
+            
+            supabase
+              .from('employee_leave_balances')
+              .select('*')
+              .eq('employee_id', employeeId)
+              .eq('year', new Date().getFullYear())
+          ]);
+
+          setLeaveRequests(requestsResult.data || []);
+          
+          // Process balances
+          const balances = balancesResult.data || [];
+          
+          if (balances.length > 0) {
+            // Get leave type names
+            const leaveTypeIds = [...new Set(balances.map(b => b.leave_type_id))];
+            const { data: leaveTypesData } = await supabase
+              .from('leave_types')
+              .select('id, name')
+              .in('id', leaveTypeIds);
+            
+            const processedBalances = {
+              annual: { used: 0, total: 0, remaining: 0 },
+              sick: { used: 0, total: 0, remaining: 0 },
+              personal: { used: 0, total: 0, remaining: 0 }
+            };
+
+            balances.forEach(balance => {
+              const leaveType = leaveTypesData?.find(lt => lt.id === balance.leave_type_id);
+              const typeName = leaveType?.name?.toLowerCase();
+              if (typeName && processedBalances[typeName as keyof typeof processedBalances]) {
+                processedBalances[typeName as keyof typeof processedBalances] = {
+                  used: balance.used_days,
+                  total: balance.allocated_days,
+                  remaining: balance.allocated_days - balance.used_days
+                };
+              }
+            });
+
+            setLeaveBalances(processedBalances);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching leave data:', error);
+      } finally {
+        setLoadingRequests(false);
+      }
+    };
+
+    fetchLeaveData();
+  }, [userRole, employeeId]);
+
+
+  const handleSubmitRequest = async () => {
     if (!newRequest.type || !newRequest.startDate || !newRequest.endDate || !newRequest.reason) {
       toast({
         title: "Missing Information",
@@ -117,20 +168,113 @@ export const LeaveManagement = ({ userRole }: LeaveManagementProps) => {
       return;
     }
 
-    toast({
-      title: "Leave Request Submitted",
-      description: "Your request has been sent for approval",
-    });
+    if (!employeeId) {
+      toast({
+        title: "Error",
+        description: "Employee ID not found. Please refresh the page.",
+        variant: "destructive"
+      });
+      return;
+    }
 
-    setNewRequest({ type: "", startDate: "", endDate: "", reason: "" });
-    setShowNewRequest(false);
+    try {
+      // Find leave type ID
+      const leaveType = leaveTypes.find(lt => lt.name.toLowerCase().includes(newRequest.type));
+      if (!leaveType) {
+        toast({
+          title: "Error",
+          description: "Invalid leave type selected",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Calculate total days
+      const startDate = new Date(newRequest.startDate);
+      const endDate = new Date(newRequest.endDate);
+      const totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
+      const { error } = await supabase
+        .from('leave_requests')
+        .insert({
+          employee_id: employeeId,
+          leave_type_id: leaveType.id,
+          start_date: newRequest.startDate,
+          end_date: newRequest.endDate,
+          total_days: totalDays,
+          reason: newRequest.reason,
+          status: 'pending'
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Leave Request Submitted",
+        description: "Your request has been sent for approval",
+      });
+
+      // Refresh leave requests
+      if (userRole === 'staff' && employeeId) {
+        const { data: requests } = await supabase
+          .from('leave_requests')
+          .select(`
+            *,
+            employee:employees(full_name, department),
+            leave_type:leave_types(name)
+          `)
+          .eq('employee_id', employeeId)
+          .order('created_at', { ascending: false });
+        setLeaveRequests(requests || []);
+      }
+
+      setNewRequest({ type: "", startDate: "", endDate: "", reason: "" });
+      setShowNewRequest(false);
+    } catch (error) {
+      console.error('Error submitting leave request:', error);
+      toast({
+        title: "Error",
+        description: "Failed to submit leave request. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleApproval = (id: number, action: 'approve' | 'reject') => {
-    toast({
-      title: `Request ${action === 'approve' ? 'Approved' : 'Rejected'}`,
-      description: `Leave request has been ${action === 'approve' ? 'approved' : 'rejected'}`,
-    });
+  const handleApproval = async (id: string, action: 'approve' | 'reject') => {
+    try {
+      const { error } = await supabase
+        .from('leave_requests')
+        .update({
+          status: action === 'approve' ? 'approved' : 'rejected',
+          reviewed_at: new Date().toISOString(),
+          reviewed_by: user?.id
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast({
+        title: `Request ${action === 'approve' ? 'Approved' : 'Rejected'}`,
+        description: `Leave request has been ${action === 'approve' ? 'approved' : 'rejected'}`,
+      });
+
+      // Refresh requests
+      const { data: requests } = await supabase
+        .from('leave_requests')
+        .select(`
+          *,
+          employee:employees(full_name, department),
+          leave_type:leave_types(name)
+        `)
+        .order('created_at', { ascending: false });
+      setLeaveRequests(requests || []);
+    } catch (error) {
+      console.error('Error updating leave request:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update leave request. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const getStatusIcon = (status: string) => {
@@ -316,14 +460,35 @@ export const LeaveManagement = ({ userRole }: LeaveManagementProps) => {
                       )}
                       
                       {exception.document_url && (
-                        <a 
-                          href={exception.document_url} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
+                        <button
+                          onClick={async () => {
+                            try {
+                              const { data } = await supabase.storage
+                                .from('hr-documents')
+                                .createSignedUrl(exception.document_url, 60);
+                              
+                              if (data?.signedUrl) {
+                                window.open(data.signedUrl, '_blank');
+                              } else {
+                                toast({
+                                  title: "Error",
+                                  description: "Could not access document",
+                                  variant: "destructive"
+                                });
+                              }
+                            } catch (error) {
+                              console.error('Error accessing document:', error);
+                              toast({
+                                title: "Error",
+                                description: "Failed to open document",
+                                variant: "destructive"
+                              });
+                            }
+                          }}
                           className="text-sm text-primary hover:underline"
                         >
                           View attached document
-                        </a>
+                        </button>
                       )}
                     </div>
 
@@ -374,10 +539,11 @@ export const LeaveManagement = ({ userRole }: LeaveManagementProps) => {
                         <SelectValue placeholder="Select leave type" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="annual">Annual Leave</SelectItem>
-                        <SelectItem value="sick">Sick Leave</SelectItem>
-                        <SelectItem value="personal">Personal Leave</SelectItem>
-                        <SelectItem value="emergency">Emergency Leave</SelectItem>
+                        {leaveTypes.map(type => (
+                          <SelectItem key={type.id} value={type.name.toLowerCase()}>
+                            {type.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -451,7 +617,7 @@ export const LeaveManagement = ({ userRole }: LeaveManagementProps) => {
         </Card>
       )}
 
-      {/* Leave Requests List */}
+      {/* Leave Requests */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center">
@@ -460,66 +626,84 @@ export const LeaveManagement = ({ userRole }: LeaveManagementProps) => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {leaveRequests.map((request) => (
-              <div key={request.id} className="border rounded-lg p-4 hover:shadow-sm transition-shadow">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-3">
-                      {getStatusIcon(request.status)}
-                      <div>
-                        <h4 className="font-medium text-foreground">
-                          {userRole === 'admin' ? request.employee : request.type}
-                        </h4>
-                        <p className="text-sm text-muted-foreground">
-                          {userRole === 'admin' ? `${request.department} • ${request.type}` : 
-                           `${request.startDate} to ${request.endDate}`}
+          {loadingRequests ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <span className="ml-2 text-muted-foreground">Loading requests...</span>
+            </div>
+          ) : leaveRequests.length === 0 ? (
+            <div className="text-center py-8">
+              <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">No leave requests found</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {leaveRequests.map((request) => (
+                <div key={request.id} className="border rounded-lg p-4 hover:shadow-sm transition-shadow">
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-2">
+                      <div className="flex items-center space-x-3">
+                        {getStatusIcon(request.status)}
+                        <div>
+                          <h4 className="font-medium text-foreground">
+                            {userRole === 'admin' ? request.employee?.full_name : request.leave_type?.name}
+                          </h4>
+                          <p className="text-sm text-muted-foreground">
+                            {userRole === 'admin' ? `${request.employee?.department} • ${request.leave_type?.name}` : `${request.total_days} days`}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="text-sm text-muted-foreground">
+                        {formatDate(request.start_date)} to {formatDate(request.end_date)}
+                        {userRole === 'admin' && (
+                          <span className="ml-2">• {request.total_days} days</span>
+                        )}
+                      </div>
+                      
+                      <p className="text-sm text-muted-foreground">{request.reason}</p>
+                      
+                      {request.status === 'rejected' && request.review_comments && (
+                        <p className="text-sm text-status-rejected font-medium">
+                          Rejection reason: {request.review_comments}
                         </p>
-                      </div>
+                      )}
                     </div>
-                    
-                    <p className="text-sm text-muted-foreground">{request.reason}</p>
-                    
-                    {request.status === 'rejected' && request.rejectionReason && (
-                      <p className="text-sm text-status-rejected font-medium">
-                        Rejection reason: {request.rejectionReason}
-                      </p>
-                    )}
-                  </div>
 
-                  <div className="text-right space-y-2">
-                    <Badge className={getStatusBadge(request.status)}>
-                      {request.status}
-                    </Badge>
-                    <div className="text-xs text-muted-foreground">
-                      <div>{request.days} day{request.days !== 1 ? 's' : ''}</div>
-                      <div>Submitted {request.submittedDate}</div>
-                    </div>
-                    
-                    {userRole === 'admin' && request.status === 'pending' && (
-                      <div className="flex space-x-2 mt-2">
-                        <Button 
-                          size="sm" 
-                          onClick={() => handleApproval(request.id, 'approve')}
-                          className="bg-status-approved hover:bg-status-approved/90 text-white"
-                        >
-                          Approve
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => handleApproval(request.id, 'reject')}
-                          className="border-status-rejected text-status-rejected hover:bg-status-rejected hover:text-white"
-                        >
-                          Reject
-                        </Button>
+                    <div className="text-right space-y-2">
+                      <Badge className={getStatusBadge(request.status)}>
+                        {request.status}
+                      </Badge>
+                      <div className="text-xs text-muted-foreground">
+                        Submitted {formatDate(request.created_at)}
                       </div>
-                    )}
+                      
+                      {userRole === 'admin' && request.status === 'pending' && (
+                        <div className="flex space-x-2 mt-2">
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            className="text-status-approved border-status-approved hover:bg-status-approved hover:text-white"
+                            onClick={() => handleApproval(request.id, 'approve')}
+                          >
+                            Approve
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            className="text-status-rejected border-status-rejected hover:bg-status-rejected hover:text-white"
+                            onClick={() => handleApproval(request.id, 'reject')}
+                          >
+                            Reject
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

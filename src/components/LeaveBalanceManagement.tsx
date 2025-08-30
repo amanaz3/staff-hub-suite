@@ -153,9 +153,27 @@ export const LeaveBalanceManagement = () => {
           description: "Leave balance updated successfully"
         });
       } else {
+        // Check if balance already exists for this employee/leave type/year
+        const { data: existing } = await supabase
+          .from('employee_leave_balances')
+          .select('id')
+          .eq('employee_id', selectedEmployeeId)
+          .eq('leave_type_id', selectedLeaveTypeId)
+          .eq('year', selectedYear)
+          .maybeSingle();
+
+        if (existing) {
+          toast({
+            title: "Error", 
+            description: "Balance already exists for this employee, leave type and year",
+            variant: "destructive"
+          });
+          return;
+        }
+
         const { error } = await supabase
           .from('employee_leave_balances')
-          .upsert(balanceData);
+          .insert(balanceData);
 
         if (error) throw error;
 
