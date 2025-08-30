@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { EnhancedCard } from "@/components/ui/enhanced-card";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -19,7 +20,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
-import { cn } from "@/lib/utils";
 
 interface DashboardProps {
   userRole: 'admin' | 'staff';
@@ -45,17 +45,34 @@ interface TodayAttendance {
   status: string;
 }
 
+interface DashboardStats {
+  totalStaff: number;
+  loggedInToday: number;
+  onLeaveToday: number;
+  pendingRequests: number;
+  lateCheckIns: number;
+}
+
 export const Dashboard = ({ userRole, currentUser, userProfile, onLogout, onNavigate }: DashboardProps) => {
   const [todayAttendance, setTodayAttendance] = useState<TodayAttendance[]>([]);
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats>({
+    totalStaff: 0,
+    loggedInToday: 0,
+    onLeaveToday: 0,
+    pendingRequests: 0,
+    lateCheckIns: 0
+  });
   const [loading, setLoading] = useState(true);
+  
   // Get today's date in YYYY-MM-DD format
   const today = new Date().toISOString().split('T')[0];
 
-  // Fetch today's attendance data
+  // Fetch dashboard data
   useEffect(() => {
-    const fetchTodayAttendance = async () => {
+    const fetchDashboardData = async () => {
       try {
-        const { data, error } = await supabase
+        // Fetch today's attendance data
+        const { data: attendanceData, error: attendanceError } = await supabase
           .from('attendance')
           .select(`
             clock_in_time,
@@ -69,51 +86,75 @@ export const Dashboard = ({ userRole, currentUser, userProfile, onLogout, onNavi
           .eq('date', today)
           .order('clock_in_time', { ascending: true });
 
-        if (error) {
-          console.error('Error fetching today\'s attendance:', error);
-          return;
+        if (attendanceError) {
+          console.error('Error fetching today\'s attendance:', attendanceError);
+        } else {
+          const formattedData: TodayAttendance[] = (attendanceData || []).map(record => ({
+            employee_name: record.employees.full_name,
+            department: record.employees.department,
+            clock_in_time: record.clock_in_time,
+            clock_out_time: record.clock_out_time,
+            status: record.status
+          }));
+
+          setTodayAttendance(formattedData);
         }
 
-        const formattedData: TodayAttendance[] = data.map(record => ({
-          employee_name: record.employees.full_name,
-          department: record.employees.department,
-          clock_in_time: record.clock_in_time,
-          clock_out_time: record.clock_out_time,
-          status: record.status
-        }));
+        // Fetch dashboard stats for admins
+        if (userRole === 'admin') {
+          // Get total staff count
+          const { count: totalStaffCount } = await supabase
+            .from('employees')
+            .select('*', { count: 'exact', head: true })
+            .eq('status', 'active');
 
-        setTodayAttendance(formattedData);
+          // Get pending leave requests
+          const { count: pendingLeaveCount } = await supabase
+            .from('leave_requests')
+            .select('*', { count: 'exact', head: true })
+            .eq('status', 'pending');
+
+          // Get pending exception requests
+          const { count: pendingExceptionCount } = await supabase
+            .from('attendance_exceptions')
+            .select('*', { count: 'exact', head: true })
+            .eq('status', 'pending');
+
+          // Get leave requests for today
+          const { count: onLeaveCount } = await supabase
+            .from('leave_requests')
+            .select('*', { count: 'exact, head: true })
+            .eq('status', 'approved')
+            .lte('start_date', today)
+            .gte('end_date', today);
+
+          // Calculate late check-ins
+          const lateCheckIns = (attendanceData || []).filter(record => {
+            if (!record.clock_in_time) return false;
+            const clockInTime = new Date(record.clock_in_time);
+            const clockInHour = clockInTime.getHours();
+            const clockInMinute = clockInTime.getMinutes();
+            // Consider late if clocked in after 9:00 AM
+            return clockInHour > 9 || (clockInHour === 9 && clockInMinute > 0);
+          }).length;
+
+          setDashboardStats({
+            totalStaff: totalStaffCount || 0,
+            loggedInToday: (attendanceData || []).length,
+            onLeaveToday: onLeaveCount || 0,
+            pendingRequests: (pendingLeaveCount || 0) + (pendingExceptionCount || 0),
+            lateCheckIns
+          });
+        }
       } catch (error) {
-        console.error('Error in fetchTodayAttendance:', error);
+        console.error('Error in fetchDashboardData:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchTodayAttendance();
-  }, [today]);
-
-  // Mock data for other dashboard stats - in real app this would come from your backend
-  const dashboardData = {
-    totalStaff: 24,
-    loggedInToday: todayAttendance.length,
-    onLeaveToday: 3,
-    pendingRequests: 5,
-    lateCheckIns: todayAttendance.filter(record => {
-      if (!record.clock_in_time) return false;
-      const clockInTime = new Date(record.clock_in_time);
-      const clockInHour = clockInTime.getHours();
-      const clockInMinute = clockInTime.getMinutes();
-      // Consider late if clocked in after 9:00 AM
-      return clockInHour > 9 || (clockInHour === 9 && clockInMinute > 0);
-    }).length,
-    upcomingLeaves: [
-      { name: "Sarah Chen", department: "Engineering", dates: "Dec 23-27", type: "Annual" },
-      { name: "Mike Johnson", department: "Sales", dates: "Dec 30-31", type: "Personal" },
-      { name: "Emily Davis", department: "Marketing", dates: "Jan 2-5", type: "Sick" }
-    ]
-  };
-
+    fetchDashboardData();
+  }, [today, userRole]);
 
   const getAttendanceStatus = (record: TodayAttendance) => {
     if (!record.clock_in_time) return 'absent';
@@ -130,19 +171,6 @@ export const Dashboard = ({ userRole, currentUser, userProfile, onLogout, onNavi
     return 'present';
   };
 
-  const getStatusBadge = (status: string) => {
-    const variants = {
-      present: "bg-status-present text-white",
-      late: "bg-status-late text-white", 
-      absent: "bg-status-absent text-white",
-      approved: "bg-status-approved text-white",
-      pending: "bg-status-pending text-white",
-      rejected: "bg-status-rejected text-white"
-    };
-    
-    return variants[status as keyof typeof variants] || "bg-muted";
-  };
-  
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -208,7 +236,7 @@ export const Dashboard = ({ userRole, currentUser, userProfile, onLogout, onNavi
                 <div className="space-y-2">
                   <p className="text-sm font-medium text-muted-foreground">Total Staff</p>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-3xl font-bold">{dashboardData.totalStaff}</span>
+                    <span className="text-3xl font-bold">{dashboardStats.totalStaff}</span>
                     <TrendingUp className="h-4 w-4 text-success" />
                   </div>
                   <p className="text-xs text-muted-foreground">Active employees</p>
@@ -227,11 +255,11 @@ export const Dashboard = ({ userRole, currentUser, userProfile, onLogout, onNavi
                 <div className="space-y-2">
                   <p className="text-sm font-medium text-muted-foreground">Present Today</p>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-3xl font-bold">{dashboardData.loggedInToday}</span>
-                    <span className="text-sm text-muted-foreground">/{dashboardData.totalStaff}</span>
+                    <span className="text-3xl font-bold">{dashboardStats.loggedInToday}</span>
+                    <span className="text-sm text-muted-foreground">/{dashboardStats.totalStaff}</span>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {Math.round((dashboardData.loggedInToday / dashboardData.totalStaff) * 100)}% attendance
+                    {dashboardStats.totalStaff > 0 ? Math.round((dashboardStats.loggedInToday / dashboardStats.totalStaff) * 100) : 0}% attendance
                   </p>
                 </div>
                 <div className="p-3 bg-success/10 rounded-xl group-hover:bg-success/20 transition-colors">
@@ -247,7 +275,7 @@ export const Dashboard = ({ userRole, currentUser, userProfile, onLogout, onNavi
               <div className="flex items-center justify-between">
                 <div className="space-y-2">
                   <p className="text-sm font-medium text-muted-foreground">On Leave</p>
-                  <span className="text-3xl font-bold">{dashboardData.onLeaveToday}</span>
+                  <span className="text-3xl font-bold">{dashboardStats.onLeaveToday}</span>
                   <p className="text-xs text-muted-foreground">Approved absences</p>
                 </div>
                 <div className="p-3 bg-warning/10 rounded-xl group-hover:bg-warning/20 transition-colors">
@@ -262,15 +290,9 @@ export const Dashboard = ({ userRole, currentUser, userProfile, onLogout, onNavi
             >
               <div className="flex items-center justify-between">
                 <div className="space-y-2">
-                  <p className="text-sm font-medium text-muted-foreground">
-                    {userRole === 'admin' ? 'Pending Requests' : 'Leave Balance'}
-                  </p>
-                  <span className="text-3xl font-bold">
-                    {userRole === 'admin' ? dashboardData.pendingRequests : '12'}
-                  </span>
-                  <p className="text-xs text-muted-foreground">
-                    {userRole === 'admin' ? 'Awaiting approval' : 'Days remaining'}
-                  </p>
+                  <p className="text-sm font-medium text-muted-foreground">Pending Requests</p>
+                  <span className="text-3xl font-bold">{dashboardStats.pendingRequests}</span>
+                  <p className="text-xs text-muted-foreground">Awaiting approval</p>
                 </div>
                 <div className="p-3 bg-destructive/10 rounded-xl group-hover:bg-destructive/20 transition-colors">
                   <Clock className="h-6 w-6 text-destructive" />
@@ -335,74 +357,40 @@ export const Dashboard = ({ userRole, currentUser, userProfile, onLogout, onNavi
               )}
           </EnhancedCard>
 
-          {/* Upcoming Leaves (Admin only) */}
-          {userRole === 'admin' && (
+          {/* Alerts for Admin */}
+          {userRole === 'admin' && dashboardStats.lateCheckIns > 0 && (
             <EnhancedCard
-              title="Upcoming Leaves"
-              subtitle="Approved leave requests coming up"
-              icon={CalendarIcon}
+              title="Attention Required"
+              icon={AlertCircle}
               variant="elevated"
+              className="border-warning/50 bg-warning/5"
             >
-                <div className="space-y-3">
-                  {dashboardData.upcomingLeaves.map((leave, index) => (
-                    <div key={index} className="flex items-center justify-between p-4 rounded-lg border bg-surface hover:bg-surface-subtle transition-colors">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10">
-                          <AvatarFallback className="text-sm bg-primary/10 text-primary font-medium">
-                            {leave.name.split(' ').map(n => n[0]).join('')}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="min-w-0 flex-1">
-                          <p className="font-medium text-sm text-foreground">{leave.name}</p>
-                          <p className="text-xs text-muted-foreground">{leave.department}</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-medium">{leave.dates}</p>
-                        <StatusBadge variant="pending" className="mt-1">
-                          {leave.type}
-                        </StatusBadge>
-                      </div>
-                    </div>
-                  ))}
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-warning/10 rounded-lg">
+                  <AlertCircle className="h-5 w-5 text-warning" />
                 </div>
+                <div className="flex-1">
+                  <p className="text-sm text-foreground font-medium mb-1">
+                    {dashboardStats.lateCheckIns} staff members had late check-ins today
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Consider following up for attendance policy compliance.
+                  </p>
+                  {onNavigate && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => onNavigate('attendance')}
+                      className="mt-3"
+                    >
+                      Review Attendance
+                    </Button>
+                  )}
+                </div>
+              </div>
             </EnhancedCard>
           )}
         </div>
-
-        {/* Alerts for Admin */}
-        {userRole === 'admin' && dashboardData.lateCheckIns > 0 && (
-          <EnhancedCard
-            title="Attention Required"
-            icon={AlertCircle}
-            variant="elevated"
-            className="mt-8 border-warning/50 bg-warning/5"
-          >
-            <div className="flex items-start gap-3">
-              <div className="p-2 bg-warning/10 rounded-lg">
-                <AlertCircle className="h-5 w-5 text-warning" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm text-foreground font-medium mb-1">
-                  {dashboardData.lateCheckIns} staff members had late check-ins today
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Consider following up for attendance policy compliance.
-                </p>
-                {onNavigate && (
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => onNavigate('leaves')}
-                    className="mt-3"
-                  >
-                    Review Attendance
-                  </Button>
-                )}
-              </div>
-            </div>
-          </EnhancedCard>
-        )}
       </div>
     </div>
   );

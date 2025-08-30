@@ -459,6 +459,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      bootstrap_user: {
+        Args: {
+          _department?: string
+          _email: string
+          _full_name: string
+          _position?: string
+          _role?: string
+        }
+        Returns: Json
+      }
+      is_admin: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
       send_notification_email: {
         Args: { p_html_content: string; p_subject: string; p_to_email: string }
         Returns: Json

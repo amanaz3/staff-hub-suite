@@ -1,3 +1,4 @@
+
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -42,10 +43,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
         
         if (session?.user && event !== 'SIGNED_OUT') {
-          // Debounce profile fetching to avoid multiple calls
-          profileFetchTimeout = setTimeout(() => {
+          // Bootstrap user profile/employee if needed, then fetch profile
+          profileFetchTimeout = setTimeout(async () => {
             if (mounted) {
-              fetchProfile(session.user.id);
+              await bootstrapUserIfNeeded(session.user);
+              await fetchProfile(session.user.id);
             }
           }, 200);
         } else {
@@ -65,10 +67,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        // Debounce initial profile fetch as well
-        profileFetchTimeout = setTimeout(() => {
+        // Bootstrap and fetch profile for existing session
+        profileFetchTimeout = setTimeout(async () => {
           if (mounted) {
-            fetchProfile(session.user.id);
+            await bootstrapUserIfNeeded(session.user);
+            await fetchProfile(session.user.id);
           }
         }, 200);
       }
@@ -84,6 +87,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
+  const bootstrapUserIfNeeded = async (user: User) => {
+    try {
+      // Call bootstrap function to ensure profile and employee records exist
+      const { error } = await supabase.rpc('bootstrap_user', {
+        _email: user.email || '',
+        _full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+        _role: user.user_metadata?.role || 'staff',
+        _department: user.user_metadata?.department || 'General',
+        _position: user.user_metadata?.position || 'Staff'
+      });
+      
+      if (error) {
+        console.error('Error bootstrapping user:', error);
+      }
+    } catch (error) {
+      console.error('Error in bootstrapUserIfNeeded:', error);
+    }
+  };
+
   const fetchProfile = async (userId: string) => {
     try {
       console.log('Fetching profile for user:', userId);
@@ -91,7 +113,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .from('profiles')
         .select('*')
         .eq('user_id', userId)
-        .maybeSingle(); // Use maybeSingle instead of single to avoid errors when no data
+        .maybeSingle();
 
       if (error) {
         console.error('Error fetching profile:', error);
@@ -117,7 +139,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           emailRedirectTo: redirectUrl,
           data: {
             full_name: userData.full_name,
-            role: userData.role || 'staff'
+            role: userData.role || 'staff',
+            department: userData.department || 'General',
+            position: userData.position || 'Staff'
           }
         }
       });
@@ -153,27 +177,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (error) {
         console.error('Sign in error:', error);
-        
-        // Handle specific error cases
-        if (error.message === 'Email not confirmed') {
-          toast({
-            title: "Email Not Confirmed",
-            description: "Please check your email and click the confirmation link, or use the sign up form to create a new account.",
-            variant: "destructive",
-          });
-        } else if (error.message === 'Invalid login credentials') {
-          toast({
-            title: "Invalid Credentials",
-            description: "Please check your email and password, or use a demo account.",
-            variant: "destructive",
-          });
-        } else {
-          toast({
-            title: "Sign In Failed",
-            description: error.message,
-            variant: "destructive",
-          });
-        }
+        toast({
+          title: "Sign In Failed",
+          description: error.message,
+          variant: "destructive",
+        });
       } else {
         console.log('Sign in successful');
         toast({
