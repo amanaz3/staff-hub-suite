@@ -123,7 +123,7 @@ export const Dashboard = ({ userRole, currentUser, userProfile, onLogout, onNavi
           // Get leave requests for today
           const { count: onLeaveCount } = await supabase
             .from('leave_requests')
-            .select('*', { count: 'exact, head: true })
+            .select('*', { count: 'exact', head: true })
             .eq('status', 'approved')
             .lte('start_date', today)
             .gte('end_date', today);
