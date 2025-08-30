@@ -6,6 +6,8 @@ import { LeaveManagement } from "@/components/LeaveManagement";
 import { Navigation, Breadcrumb } from "@/components/ui/navigation";
 import { Button } from "@/components/ui/button";
 import { Users, Calendar, Settings, BarChart, Menu, X, RefreshCw } from "lucide-react";
+import { AdminEmails } from "@/pages/AdminEmails";
+import { AdminUsers } from "@/pages/AdminUsers";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 
@@ -51,8 +53,8 @@ const Index = () => {
     { id: 'dashboard', label: 'Dashboard', icon: BarChart },
     { id: 'leaves', label: 'Leave Management', icon: Calendar },
     ...(profile?.role === 'admin' ? [
-      { id: 'staff', label: 'Staff Directory', icon: Users, badge: '24' },
-      { id: 'settings', label: 'Settings', icon: Settings }
+      { id: 'users', label: 'User Management', icon: Users },
+      { id: 'emails', label: 'Test Emails', icon: Settings }
     ] : [])
   ];
 
@@ -205,28 +207,15 @@ const Index = () => {
             </div>
           )}
 
-          {activeTab === 'staff' && (
+          {activeTab === 'users' && (
             <div className="container mx-auto px-4 sm:px-6 py-8">
-              <div className="text-center py-12">
-                <Users className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-                <h2 className="text-2xl font-bold mb-4">Staff Directory</h2>
-                <p className="text-muted-foreground max-w-md mx-auto">
-                  Comprehensive staff management features are coming soon. 
-                  Manage employee profiles, departments, and organizational structure.
-                </p>
-              </div>
+              <AdminUsers />
             </div>
           )}
 
-          {activeTab === 'settings' && (
+          {activeTab === 'emails' && (
             <div className="container mx-auto px-4 sm:px-6 py-8">
-              <div className="text-center py-12">
-                <Settings className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-                <h2 className="text-2xl font-bold mb-4">System Settings</h2>
-                <p className="text-muted-foreground max-w-md mx-auto">
-                  Configure system preferences, security settings, and administrative options.
-                </p>
-              </div>
+              <AdminEmails />
             </div>
           )}
         </main>
