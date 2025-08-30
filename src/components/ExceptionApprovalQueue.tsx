@@ -115,6 +115,36 @@ export const ExceptionApprovalQueue = () => {
 
       if (updateError) throw updateError;
 
+      // Send email notification to employee
+      try {
+        // Get employee details
+        const { data: employeeData } = await supabase
+          .from('employees')
+          .select('email, full_name')
+          .eq('id', exception.employee_id)
+          .single();
+
+        if (employeeData) {
+          await supabase.functions.invoke('notify-email', {
+            body: {
+              type: 'attendance_exception',
+              action: status,
+              recipientEmail: employeeData.email,
+              recipientName: employeeData.full_name,
+              submitterName: employeeData.full_name,
+              details: {
+                exceptionType: exception.exception_type,
+                reason: exception.reason,
+                adminComments: comments.trim() || undefined
+              }
+            }
+          });
+        }
+      } catch (emailError) {
+        console.log('Email notification failed:', emailError);
+        // Don't fail the whole operation if email fails
+      }
+
       // If approved and it's a time correction exception, update/create attendance record
       if (status === 'approved' && ['missed_clock_in', 'missed_clock_out', 'wrong_time'].includes(exception.exception_type)) {
         await handleAttendanceCorrection(exception);

@@ -165,6 +165,44 @@ export const ExceptionRequestForm = ({ attendanceId, employeeId, onSuccess }: Ex
 
       if (error) throw error;
 
+      // Send email notification to admins
+      try {
+        // Get admin emails
+        const { data: adminProfiles } = await supabase
+          .from('profiles')
+          .select('email, full_name')
+          .eq('role', 'admin');
+
+        // Get employee details
+        const { data: employeeData } = await supabase
+          .from('employees')
+          .select('full_name')
+          .eq('id', employeeId)
+          .single();
+
+        // Send email to each admin
+        if (adminProfiles && adminProfiles.length > 0 && employeeData) {
+          for (const admin of adminProfiles) {
+            await supabase.functions.invoke('notify-email', {
+              body: {
+                type: 'attendance_exception',
+                action: 'submitted',
+                recipientEmail: admin.email,
+                recipientName: admin.full_name,
+                submitterName: employeeData.full_name,
+                details: {
+                  exceptionType: exceptionType,
+                  reason: reason.trim()
+                }
+              }
+            });
+          }
+        }
+      } catch (emailError) {
+        console.log('Email notification failed:', emailError);
+        // Don't fail the whole operation if email fails
+      }
+
       toast({
         title: "Success",
         description: "Exception request submitted successfully"

@@ -208,6 +208,46 @@ export const LeaveManagement = ({ userRole }: LeaveManagementProps) => {
 
       if (error) throw error;
 
+      // Send email notification to admins
+      try {
+        // Get admin emails
+        const { data: adminProfiles } = await supabase
+          .from('profiles')
+          .select('email, full_name')
+          .eq('role', 'admin');
+
+        // Get employee details
+        const { data: employeeData } = await supabase
+          .from('employees')
+          .select('full_name')
+          .eq('id', employeeId)
+          .single();
+
+        // Send email to each admin
+        if (adminProfiles && adminProfiles.length > 0 && employeeData) {
+          for (const admin of adminProfiles) {
+            await supabase.functions.invoke('notify-email', {
+              body: {
+                type: 'leave_request',
+                action: 'submitted',
+                recipientEmail: admin.email,
+                recipientName: admin.full_name,
+                submitterName: employeeData.full_name,
+                details: {
+                  leaveType: leaveType.name,
+                  startDate: newRequest.startDate,
+                  endDate: newRequest.endDate,
+                  reason: newRequest.reason
+                }
+              }
+            });
+          }
+        }
+      } catch (emailError) {
+        console.log('Email notification failed:', emailError);
+        // Don't fail the whole operation if email fails
+      }
+
       toast({
         title: "Leave Request Submitted",
         description: "Your request has been sent for approval",
@@ -251,6 +291,32 @@ export const LeaveManagement = ({ userRole }: LeaveManagementProps) => {
         .eq('id', id);
 
       if (error) throw error;
+
+      // Send email notification to employee
+      try {
+        // Get the leave request details
+        const leaveRequest = leaveRequests.find(req => req.id === id);
+        if (leaveRequest && leaveRequest.employee) {
+          await supabase.functions.invoke('notify-email', {
+            body: {
+              type: 'leave_request',
+              action: action === 'approve' ? 'approved' : 'rejected',
+              recipientEmail: leaveRequest.employee.email || '',
+              recipientName: leaveRequest.employee.full_name,
+              submitterName: leaveRequest.employee.full_name,
+              details: {
+                leaveType: leaveRequest.leave_type?.name || 'Leave',
+                startDate: leaveRequest.start_date,
+                endDate: leaveRequest.end_date,
+                reason: leaveRequest.reason
+              }
+            }
+          });
+        }
+      } catch (emailError) {
+        console.log('Email notification failed:', emailError);
+        // Don't fail the whole operation if email fails
+      }
 
       toast({
         title: `Request ${action === 'approve' ? 'Approved' : 'Rejected'}`,
