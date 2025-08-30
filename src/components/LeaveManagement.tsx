@@ -6,7 +6,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { ExceptionRequestForm } from "@/components/ExceptionRequestForm";
 import { Calendar, Plus, Clock, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 
 interface LeaveManagementProps {
@@ -22,6 +25,7 @@ export const LeaveManagement = ({ userRole }: LeaveManagementProps) => {
     reason: ""
   });
   const { toast } = useToast();
+  const { user } = useAuth();
 
   // Mock data - would come from backend
   const leaveRequests = [
@@ -209,67 +213,89 @@ export const LeaveManagement = ({ userRole }: LeaveManagementProps) => {
           <CardHeader>
             <CardTitle className="flex items-center">
               <Calendar className="h-5 w-5 mr-2 text-primary" />
-              New Leave Request
+              New Request
             </CardTitle>
             <CardDescription>
-              Submit a new leave request for approval
+              Submit a new leave request or attendance exception
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="type">Leave Type</Label>
-                <Select value={newRequest.type} onValueChange={(value) => setNewRequest({...newRequest, type: value})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select leave type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="annual">Annual Leave</SelectItem>
-                    <SelectItem value="sick">Sick Leave</SelectItem>
-                    <SelectItem value="personal">Personal Leave</SelectItem>
-                    <SelectItem value="emergency">Emergency Leave</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <Tabs defaultValue="leave" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="leave">Leave</TabsTrigger>
+                <TabsTrigger value="exception">Attendance Exception</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="leave" className="space-y-4 mt-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="type">Leave Type</Label>
+                    <Select value={newRequest.type} onValueChange={(value) => setNewRequest({...newRequest, type: value})}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select leave type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="annual">Annual Leave</SelectItem>
+                        <SelectItem value="sick">Sick Leave</SelectItem>
+                        <SelectItem value="personal">Personal Leave</SelectItem>
+                        <SelectItem value="emergency">Emergency Leave</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="days">Duration</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  <Input
-                    type="date"
-                    placeholder="Start date"
-                    value={newRequest.startDate}
-                    onChange={(e) => setNewRequest({...newRequest, startDate: e.target.value})}
-                  />
-                  <Input
-                    type="date"
-                    placeholder="End date"
-                    value={newRequest.endDate}
-                    onChange={(e) => setNewRequest({...newRequest, endDate: e.target.value})}
+                  <div className="space-y-2">
+                    <Label htmlFor="days">Duration</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input
+                        type="date"
+                        placeholder="Start date"
+                        value={newRequest.startDate}
+                        onChange={(e) => setNewRequest({...newRequest, startDate: e.target.value})}
+                      />
+                      <Input
+                        type="date"
+                        placeholder="End date"
+                        value={newRequest.endDate}
+                        onChange={(e) => setNewRequest({...newRequest, endDate: e.target.value})}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="reason">Reason</Label>
+                  <Textarea
+                    id="reason"
+                    placeholder="Please provide a reason for your leave request..."
+                    value={newRequest.reason}
+                    onChange={(e) => setNewRequest({...newRequest, reason: e.target.value})}
+                    rows={3}
                   />
                 </div>
-              </div>
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="reason">Reason</Label>
-              <Textarea
-                id="reason"
-                placeholder="Please provide a reason for your leave request..."
-                value={newRequest.reason}
-                onChange={(e) => setNewRequest({...newRequest, reason: e.target.value})}
-                rows={3}
-              />
-            </div>
+                <div className="flex justify-end space-x-3">
+                  <Button variant="outline" onClick={() => setShowNewRequest(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleSubmitRequest} className="bg-primary hover:bg-primary/90">
+                    Submit Request
+                  </Button>
+                </div>
+              </TabsContent>
 
-            <div className="flex justify-end space-x-3">
-              <Button variant="outline" onClick={() => setShowNewRequest(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleSubmitRequest} className="bg-primary hover:bg-primary/90">
-                Submit Request
-              </Button>
-            </div>
+              <TabsContent value="exception" className="mt-4">
+                <ExceptionRequestForm 
+                  employeeId={user?.id || ''}
+                  onSuccess={() => {
+                    toast({
+                      title: "Exception Request Submitted",
+                      description: "Your attendance exception has been sent for approval",
+                    });
+                    setShowNewRequest(false);
+                  }}
+                />
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
       )}
