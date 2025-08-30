@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { ExceptionRequestForm } from "@/components/ExceptionRequestForm";
 import { supabase } from "@/integrations/supabase/client";
-import { Calendar, Plus, Clock, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import { Calendar, Plus, Clock, CheckCircle, XCircle, AlertCircle, FileText } from "lucide-react";
 
 interface LeaveManagementProps {
   userRole: 'admin' | 'staff';
@@ -26,12 +26,13 @@ export const LeaveManagement = ({ userRole }: LeaveManagementProps) => {
     reason: ""
   });
   const [employeeId, setEmployeeId] = useState<string>("");
+  const [attendanceExceptions, setAttendanceExceptions] = useState([]);
   const { toast } = useToast();
   const { user } = useAuth();
 
-  // Fetch employee ID when user changes
+  // Fetch employee ID and attendance exceptions when user changes
   useEffect(() => {
-    const fetchEmployeeId = async () => {
+    const fetchEmployeeData = async () => {
       if (user?.id) {
         const { data, error } = await supabase
           .from('employees')
@@ -41,11 +42,22 @@ export const LeaveManagement = ({ userRole }: LeaveManagementProps) => {
         
         if (data && !error) {
           setEmployeeId(data.id);
+          
+          // Fetch attendance exceptions for this employee
+          const { data: exceptions, error: exceptionsError } = await supabase
+            .from('attendance_exceptions')
+            .select('*')
+            .eq('employee_id', data.id)
+            .order('created_at', { ascending: false });
+          
+          if (exceptions && !exceptionsError) {
+            setAttendanceExceptions(exceptions);
+          }
         }
       }
     };
     
-    fetchEmployeeId();
+    fetchEmployeeData();
   }, [user]);
 
   // Mock data - would come from backend
@@ -144,6 +156,29 @@ export const LeaveManagement = ({ userRole }: LeaveManagementProps) => {
     return variants[status as keyof typeof variants] || "bg-muted";
   };
 
+  const formatExceptionType = (type: string) => {
+    return type.split('_').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ');
+  };
+
+  const formatTime = (timeString: string) => {
+    if (!timeString) return '-';
+    return new Date(timeString).toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return '-';
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -226,6 +261,89 @@ export const LeaveManagement = ({ userRole }: LeaveManagementProps) => {
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {/* My Attendance Exceptions (Staff only) */}
+      {userRole === 'staff' && attendanceExceptions.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <FileText className="h-5 w-5 mr-2 text-primary" />
+              My Attendance Exceptions
+            </CardTitle>
+            <CardDescription>
+              Your submitted attendance exception requests
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {attendanceExceptions.map((exception: any) => (
+                <div key={exception.id} className="border rounded-lg p-4 hover:shadow-sm transition-shadow">
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-2">
+                      <div className="flex items-center space-x-3">
+                        {getStatusIcon(exception.status)}
+                        <div>
+                          <h4 className="font-medium text-foreground">
+                            {formatExceptionType(exception.exception_type)}
+                          </h4>
+                          <p className="text-sm text-muted-foreground">
+                            {exception.target_date ? formatDate(exception.target_date) : 'No date specified'}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {(exception.proposed_clock_in_time || exception.proposed_clock_out_time) && (
+                        <div className="text-sm text-muted-foreground">
+                          {exception.proposed_clock_in_time && (
+                            <span>Clock In: {formatTime(exception.proposed_clock_in_time)}</span>
+                          )}
+                          {exception.proposed_clock_in_time && exception.proposed_clock_out_time && (
+                            <span className="mx-2">•</span>
+                          )}
+                          {exception.proposed_clock_out_time && (
+                            <span>Clock Out: {formatTime(exception.proposed_clock_out_time)}</span>
+                          )}
+                        </div>
+                      )}
+                      
+                      <p className="text-sm text-muted-foreground">{exception.reason}</p>
+                      
+                      {exception.status === 'rejected' && exception.admin_comments && (
+                        <p className="text-sm text-status-rejected font-medium">
+                          Admin comments: {exception.admin_comments}
+                        </p>
+                      )}
+                      
+                      {exception.document_url && (
+                        <a 
+                          href={exception.document_url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-sm text-primary hover:underline"
+                        >
+                          View attached document
+                        </a>
+                      )}
+                    </div>
+
+                    <div className="text-right space-y-2">
+                      <Badge className={getStatusBadge(exception.status)}>
+                        {exception.status}
+                      </Badge>
+                      <div className="text-xs text-muted-foreground">
+                        <div>Submitted {formatDate(exception.created_at)}</div>
+                        {exception.reviewed_at && (
+                          <div>Reviewed {formatDate(exception.reviewed_at)}</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* New Request Form */}
@@ -313,6 +431,18 @@ export const LeaveManagement = ({ userRole }: LeaveManagementProps) => {
                       description: "Your attendance exception has been sent for approval",
                     });
                     setShowNewRequest(false);
+                    
+                    // Refresh attendance exceptions
+                    if (employeeId) {
+                      supabase
+                        .from('attendance_exceptions')
+                        .select('*')
+                        .eq('employee_id', employeeId)
+                        .order('created_at', { ascending: false })
+                        .then(({ data }) => {
+                          if (data) setAttendanceExceptions(data);
+                        });
+                    }
                   }}
                 />
               </TabsContent>
