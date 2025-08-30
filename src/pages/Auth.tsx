@@ -28,25 +28,6 @@ export const Auth = () => {
     position: ""
   });
 
-  // Demo accounts for testing
-  const demoAccounts = {
-    admin: {
-      email: "admin@hrflow.com",
-      password: "admin123",
-      full_name: "Sarah Johnson",
-      role: "admin",
-      department: "Management",
-      position: "HR Director"
-    },
-    staff: {
-      email: "staff@hrflow.com", 
-      password: "staff123",
-      full_name: "John Smith",
-      role: "staff",
-      department: "Engineering",
-      position: "Software Developer"
-    }
-  };
 
   // Show loading while auth is initializing
   if (loading) {
@@ -107,47 +88,6 @@ export const Auth = () => {
     setIsSubmitting(false);
   };
 
-  const handleDemoLogin = async (type: 'admin' | 'staff') => {
-    const account = demoAccounts[type];
-    console.log('Demo login clicked for:', type);
-    setIsSubmitting(true);
-    
-    try {
-      // Try to sign in first
-      const { error: signInError } = await signIn(account.email, account.password);
-      
-      if (signInError) {
-        console.log('Demo account doesn\'t exist or needs confirmation, creating it...');
-        
-        // If sign in fails, create the account
-        const { error: signUpError } = await signUp(account.email, account.password, {
-          full_name: account.full_name,
-          role: account.role,
-          department: account.department,
-          position: account.position
-        });
-        
-        if (!signUpError) {
-          toast({
-            title: "Demo Account Created",
-            description: "Demo account created successfully! You can now sign in.",
-          });
-          
-          // Set the form fields for manual login
-          setSignInData({ email: account.email, password: account.password });
-        }
-      }
-    } catch (error) {
-      console.error('Demo login error:', error);
-      toast({
-        title: "Demo Login Failed",
-        description: "There was an issue with the demo login. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
 
   return (
@@ -223,55 +163,6 @@ export const Auth = () => {
                   </Button>
                 </form>
 
-                {/* Demo Accounts */}
-                <div className="space-y-4">
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t border-border" />
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-card px-2 text-muted-foreground">
-                        Demo Accounts
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <Button
-                      variant="outline"
-                      onClick={() => handleDemoLogin('admin')}
-                      className="flex flex-col h-auto p-4 space-y-2"
-                      disabled={isSubmitting}
-                    >
-                      <Badge variant="secondary" className="text-xs">Admin</Badge>
-                      <span className="text-xs text-muted-foreground">
-                        Full Access
-                      </span>
-                    </Button>
-
-                    <Button
-                      variant="outline"
-                      onClick={() => handleDemoLogin('staff')}
-                      className="flex flex-col h-auto p-4 space-y-2"
-                      disabled={isSubmitting}
-                    >
-                      <Badge variant="outline" className="text-xs">Staff</Badge>
-                      <span className="text-xs text-muted-foreground">
-                        Employee View
-                      </span>
-                    </Button>
-                  </div>
-
-                  <div className="text-center space-y-2">
-                    <p className="text-xs text-muted-foreground">
-                      Click demo buttons to create and access test accounts
-                    </p>
-                    <p className="text-xs text-muted-foreground font-medium">
-                      Admin: admin@hrflow.com / admin123<br/>
-                      Staff: staff@hrflow.com / staff123
-                    </p>
-                  </div>
-                </div>
               </CardContent>
             </TabsContent>
 

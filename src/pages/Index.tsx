@@ -5,14 +5,15 @@ import { AdminDashboard } from "@/components/AdminDashboard";
 import { LeaveManagement } from "@/components/LeaveManagement";
 import { Navigation, Breadcrumb } from "@/components/ui/navigation";
 import { Button } from "@/components/ui/button";
-import { Users, Calendar, Settings, BarChart, Menu, X } from "lucide-react";
+import { Users, Calendar, Settings, BarChart, Menu, X, RefreshCw } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 
 const Index = () => {
-  const { user, profile, loading, signOut } = useAuth();
+  const { user, profile, loading, signOut, refreshProfile } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   if (loading) {
     return (
@@ -63,6 +64,12 @@ const Index = () => {
   const handleNavigationClick = (itemId: string) => {
     setActiveTab(itemId);
     setSidebarOpen(false); // Close mobile sidebar on navigation
+  };
+
+  const handleRefreshProfile = async () => {
+    setRefreshing(true);
+    await refreshProfile();
+    setRefreshing(false);
   };
 
   return (
@@ -123,14 +130,26 @@ const Index = () => {
                 </p>
               </div>
             </div>
-            <Button 
-              variant="outline" 
-              onClick={signOut} 
-              size="sm" 
-              className="w-full"
-            >
-              Sign Out
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant="ghost" 
+                onClick={handleRefreshProfile}
+                disabled={refreshing}
+                size="sm"
+                className="flex-1"
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={signOut} 
+                size="sm" 
+                className="flex-1"
+              >
+                Sign Out
+              </Button>
+            </div>
           </div>
         </div>
       </aside>
