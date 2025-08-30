@@ -92,6 +92,13 @@ export type Database = {
             foreignKeyName: "attendance_employee_id_fkey"
             columns: ["employee_id"]
             isOneToOne: false
+            referencedRelation: "employee_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
             referencedRelation: "employees"
             referencedColumns: ["id"]
           },
@@ -274,6 +281,13 @@ export type Database = {
             foreignKeyName: "employees_manager_id_fkey"
             columns: ["manager_id"]
             isOneToOne: false
+            referencedRelation: "employee_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employees_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
             referencedRelation: "employees"
             referencedColumns: ["id"]
           },
@@ -330,6 +344,13 @@ export type Database = {
             foreignKeyName: "leave_requests_employee_id_fkey"
             columns: ["employee_id"]
             isOneToOne: false
+            referencedRelation: "employee_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_requests_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
             referencedRelation: "employees"
             referencedColumns: ["id"]
           },
@@ -338,6 +359,13 @@ export type Database = {
             columns: ["leave_type_id"]
             isOneToOne: false
             referencedRelation: "leave_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "employee_directory"
             referencedColumns: ["id"]
           },
           {
@@ -510,7 +538,39 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      employee_directory: {
+        Row: {
+          department: string | null
+          employee_id: string | null
+          full_name: string | null
+          hire_date: string | null
+          id: string | null
+          position: string | null
+          status: string | null
+          wfh_enabled: boolean | null
+        }
+        Insert: {
+          department?: string | null
+          employee_id?: string | null
+          full_name?: string | null
+          hire_date?: string | null
+          id?: string | null
+          position?: string | null
+          status?: string | null
+          wfh_enabled?: boolean | null
+        }
+        Update: {
+          department?: string | null
+          employee_id?: string | null
+          full_name?: string | null
+          hire_date?: string | null
+          id?: string | null
+          position?: string | null
+          status?: string | null
+          wfh_enabled?: boolean | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       bootstrap_user: {

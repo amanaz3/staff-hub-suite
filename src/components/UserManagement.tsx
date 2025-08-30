@@ -14,11 +14,12 @@ interface Employee {
   id: string;
   employee_id: string;
   full_name: string;
-  email: string;
+  email?: string; // Optional since directory view doesn't include email
   department: string;
   position: string;
   status: string;
-  hire_date: string;
+  hire_date?: string; // Optional
+  wfh_enabled?: boolean; // Optional
 }
 
 export const UserManagement = () => {
@@ -26,6 +27,10 @@ export const UserManagement = () => {
   const [loading, setLoading] = useState(true);
   const [inviting, setInviting] = useState(false);
   const { toast } = useToast();
+  const [profile, setProfile] = useState<any>(null);
+  
+  // Check if user is admin
+  const isAdmin = profile?.role === 'admin';
   
   // Form state
   const [formData, setFormData] = useState({
@@ -36,15 +41,46 @@ export const UserManagement = () => {
     position: ''
   });
 
+  // Fetch user profile on mount
+  useEffect(() => {
+    const getCurrentUserProfile = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+        setProfile(profileData);
+      }
+    };
+    getCurrentUserProfile();
+  }, []);
+
   const fetchEmployees = async () => {
     try {
-      const { data, error } = await supabase
-        .from('employees')
-        .select('*')
-        .order('created_at', { ascending: false });
+      let data, error;
+      
+      if (isAdmin) {
+        // Admin gets full employee data
+        const result = await supabase
+          .from('employees')
+          .select('*')
+          .order('created_at', { ascending: false });
+        data = result.data;
+        error = result.error;
+      } else {
+        // Non-admin gets directory view
+        const result = await supabase
+          .from('employee_directory')
+          .select('*')
+          .order('full_name');
+        data = result.data;
+        error = result.error;
+      }
 
       if (error) throw error;
-      setEmployees(data || []);
+      setEmployees((data as Employee[]) || []);
     } catch (error) {
       console.error('Error fetching employees:', error);
       toast({
@@ -58,8 +94,11 @@ export const UserManagement = () => {
   };
 
   useEffect(() => {
-    fetchEmployees();
-  }, []);
+    // Only fetch employees after profile is loaded
+    if (profile !== null) {
+      fetchEmployees();
+    }
+  }, [profile, isAdmin]);
 
   const handleInviteUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -109,8 +148,9 @@ export const UserManagement = () => {
         </div>
       </div>
 
-      {/* Invite User Form */}
-      <Card>
+      {/* Invite User Form - Only for Admins */}
+      {isAdmin && (
+        <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <UserPlus className="h-5 w-5" />
@@ -176,11 +216,17 @@ export const UserManagement = () => {
           </form>
         </CardContent>
       </Card>
+      )}
 
       {/* Users List */}
       <Card>
         <CardHeader>
           <CardTitle>Current Users</CardTitle>
+          {!isAdmin && (
+            <p className="text-sm text-muted-foreground">
+              Directory view - Contact admin for full employee management
+            </p>
+          )}
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -188,22 +234,22 @@ export const UserManagement = () => {
           ) : (
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Employee ID</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Department</TableHead>
-                  <TableHead>Position</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Hire Date</TableHead>
-                </TableRow>
+                  <TableRow>
+                    <TableHead>Employee ID</TableHead>
+                    <TableHead>Name</TableHead>
+                    {isAdmin && <TableHead>Email</TableHead>}
+                    <TableHead>Department</TableHead>
+                    <TableHead>Position</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Hire Date</TableHead>
+                  </TableRow>
               </TableHeader>
               <TableBody>
                 {employees.map((employee) => (
                   <TableRow key={employee.id}>
                     <TableCell className="font-medium">{employee.employee_id}</TableCell>
                     <TableCell>{employee.full_name}</TableCell>
-                    <TableCell>{employee.email}</TableCell>
+                    {isAdmin && <TableCell>{employee.email || 'N/A'}</TableCell>}
                     <TableCell>{employee.department}</TableCell>
                     <TableCell>{employee.position}</TableCell>
                     <TableCell>
@@ -211,7 +257,7 @@ export const UserManagement = () => {
                         {employee.status}
                       </Badge>
                     </TableCell>
-                    <TableCell>{new Date(employee.hire_date).toLocaleDateString()}</TableCell>
+                    <TableCell>{employee.hire_date ? new Date(employee.hire_date).toLocaleDateString() : 'N/A'}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
