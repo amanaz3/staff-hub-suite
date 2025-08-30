@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Mail, Send, AlertCircle } from 'lucide-react';
+import { Mail, Send, AlertCircle, FileText, Bell } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -12,7 +12,31 @@ export const TestEmailManagement = () => {
   const [subject, setSubject] = useState('Test Email from HRFlow');
   const [message, setMessage] = useState('This is a test email to verify the email system is working correctly. If you received this, the email notifications are functioning properly!');
   const [loading, setLoading] = useState(false);
+  const [notificationLoading, setNotificationLoading] = useState(false);
   const { toast } = useToast();
+
+  const sendTestNotifications = async () => {
+    setNotificationLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('document-expiry-notifications');
+      
+      if (error) throw error;
+      
+      toast({
+        title: 'Success',
+        description: data.message || 'Document expiry notifications processed successfully',
+      });
+    } catch (error: any) {
+      console.error('Error sending notifications:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to send document expiry notifications',
+        variant: 'destructive',
+      });
+    } finally {
+      setNotificationLoading(false);
+    }
+  };
 
   const sendTestEmails = async () => {
     setLoading(true);
@@ -158,6 +182,54 @@ export const TestEmailManagement = () => {
               <>
                 <Send className="h-4 w-4 mr-2" />
                 Send Test Emails to All Users
+              </>
+            )}
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Document Expiry Notifications
+          </CardTitle>
+          <CardDescription>
+            Test the document expiry notification system that alerts users about documents expiring in 90, 30, and 7 days.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <Bell className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+              <div className="space-y-1">
+                <h4 className="text-sm font-medium text-amber-900 dark:text-amber-100">
+                  Automated Document Expiry Checks
+                </h4>
+                <p className="text-sm text-amber-700 dark:text-amber-200">
+                  This will check all active documents and send notifications for those expiring within 90, 30, or 7 days. 
+                  Notifications are sent to both employees and administrators.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <Button 
+            onClick={sendTestNotifications}
+            disabled={notificationLoading}
+            className="w-full"
+            size="lg"
+            variant="outline"
+          >
+            {notificationLoading ? (
+              <>
+                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+                Processing Expiry Notifications...
+              </>
+            ) : (
+              <>
+                <Bell className="h-4 w-4 mr-2" />
+                Check & Send Document Expiry Notifications
               </>
             )}
           </Button>

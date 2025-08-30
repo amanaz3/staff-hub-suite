@@ -421,6 +421,60 @@ export type Database = {
         }
         Relationships: []
       }
+      staff_documents: {
+        Row: {
+          created_at: string
+          document_name: string
+          document_type: string
+          employee_id: string
+          expiry_date: string | null
+          file_url: string
+          id: string
+          issue_date: string | null
+          notes: string | null
+          notification_sent_30_days: boolean | null
+          notification_sent_7_days: boolean | null
+          notification_sent_90_days: boolean | null
+          status: string
+          updated_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          created_at?: string
+          document_name: string
+          document_type: string
+          employee_id: string
+          expiry_date?: string | null
+          file_url: string
+          id?: string
+          issue_date?: string | null
+          notes?: string | null
+          notification_sent_30_days?: boolean | null
+          notification_sent_7_days?: boolean | null
+          notification_sent_90_days?: boolean | null
+          status?: string
+          updated_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          created_at?: string
+          document_name?: string
+          document_type?: string
+          employee_id?: string
+          expiry_date?: string | null
+          file_url?: string
+          id?: string
+          issue_date?: string | null
+          notes?: string | null
+          notification_sent_30_days?: boolean | null
+          notification_sent_7_days?: boolean | null
+          notification_sent_90_days?: boolean | null
+          status?: string
+          updated_at?: string
+          uploaded_by?: string
+        }
+        Relationships: []
+      }
       work_schedules: {
         Row: {
           created_at: string
@@ -479,7 +533,15 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      document_type_enum:
+        | "emirates_id"
+        | "passport"
+        | "visa"
+        | "driving_license"
+        | "work_permit"
+        | "health_card"
+        | "insurance_card"
+        | "other"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -606,6 +668,17 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      document_type_enum: [
+        "emirates_id",
+        "passport",
+        "visa",
+        "driving_license",
+        "work_permit",
+        "health_card",
+        "insurance_card",
+        "other",
+      ],
+    },
   },
 } as const
