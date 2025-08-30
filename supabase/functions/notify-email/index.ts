@@ -7,8 +7,8 @@ const corsHeaders = {
 };
 
 interface EmailNotificationRequest {
-  type: 'attendance_exception' | 'leave_request';
-  action: 'submitted' | 'approved' | 'rejected';
+  type: 'attendance_exception' | 'leave_request' | 'test_email';
+  action: 'submitted' | 'approved' | 'rejected' | 'sent';
   recipientEmail: string;
   recipientName: string;
   submitterName: string;
@@ -19,6 +19,8 @@ interface EmailNotificationRequest {
     endDate?: string;
     reason?: string;
     adminComments?: string;
+    subject?: string;
+    message?: string;
   };
 }
 
@@ -40,7 +42,15 @@ const handler = async (req: Request): Promise<Response> => {
     let subject = '';
     let htmlContent = '';
 
-    if (type === 'attendance_exception') {
+    if (type === 'test_email') {
+      subject = details.subject || 'Test Email from HRFlow';
+      htmlContent = `
+        <h2>Test Email</h2>
+        <p>Hello ${recipientName},</p>
+        <p>${details.message || 'This is a test email from the HRFlow system.'}</p>
+        <p>Best regards,<br>HRFlow System</p>
+      `;
+    } else if (type === 'attendance_exception') {
       subject = `Attendance Exception ${action.charAt(0).toUpperCase() + action.slice(1)}`;
       
       if (action === 'submitted') {

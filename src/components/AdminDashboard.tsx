@@ -5,7 +5,8 @@ import { IPManagement } from './IPManagement';
 import { ExceptionApprovalQueue } from './ExceptionApprovalQueue';
 import { LeaveBalanceManagement } from './LeaveBalanceManagement';
 import { LeaveManagement } from './LeaveManagement';
-import { Clock, Shield, AlertTriangle, Calendar, FileText } from 'lucide-react';
+import { TestEmailManagement } from './TestEmailManagement';
+import { Clock, Shield, AlertTriangle, Calendar, FileText, Mail } from 'lucide-react';
 
 interface AdminDashboardProps {
   userRole: 'admin' | 'staff';
@@ -21,7 +22,7 @@ export const AdminDashboard = ({ userRole }: AdminDashboardProps) => {
   return (
     <div className="space-y-6">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="leave" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
             Leave Requests
@@ -41,6 +42,10 @@ export const AdminDashboard = ({ userRole }: AdminDashboardProps) => {
           <TabsTrigger value="leave-balances" className="flex items-center gap-2">
             <Calendar className="h-4 w-4" />
             Leave Balances
+          </TabsTrigger>
+          <TabsTrigger value="test-emails" className="flex items-center gap-2">
+            <Mail className="h-4 w-4" />
+            Test Emails
           </TabsTrigger>
         </TabsList>
 
@@ -62,6 +67,10 @@ export const AdminDashboard = ({ userRole }: AdminDashboardProps) => {
 
         <TabsContent value="leave-balances" className="mt-6">
           <LeaveBalanceManagement />
+        </TabsContent>
+
+        <TabsContent value="test-emails" className="mt-6">
+          <TestEmailManagement />
         </TabsContent>
       </Tabs>
     </div>
