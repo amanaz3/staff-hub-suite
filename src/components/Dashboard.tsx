@@ -4,6 +4,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ClockInOut } from "@/components/ClockInOut";
+import { ExceptionRequestForm } from "@/components/ExceptionRequestForm";
 import { 
   Users, 
   UserCheck, 
@@ -192,8 +193,12 @@ export const Dashboard = ({ userRole, currentUser, userProfile, onLogout, onNavi
       <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {/* Clock In/Out for Staff */}
         {userRole === 'staff' && (
-          <div className="mb-8">
+          <div className="mb-8 space-y-6">
             <ClockInOut userProfile={userProfile} />
+            <ExceptionRequestForm 
+              employeeId={userProfile.user_id}
+              onSuccess={() => window.location.reload()}
+            />
           </div>
         )}
 
