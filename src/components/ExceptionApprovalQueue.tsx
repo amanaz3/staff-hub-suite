@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,17 +7,21 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { CheckCircle, XCircle, Clock, FileText, Download } from 'lucide-react';
+import { format } from 'date-fns';
 
 interface ExceptionRequest {
   id: string;
-  attendance_id: string;
+  attendance_id: string | null;
   employee_id: string;
-  exception_type: 'late_arrival' | 'early_departure';
+  exception_type: 'late_arrival' | 'early_departure' | 'missed_clock_in' | 'missed_clock_out' | 'wrong_time';
   reason: string;
   document_url: string | null;
   status: 'pending' | 'approved' | 'rejected';
   admin_comments: string | null;
   created_at: string;
+  target_date: string | null;
+  proposed_clock_in_time: string | null;
+  proposed_clock_out_time: string | null;
   employee_name?: string;
   attendance_date?: string;
 }
@@ -34,7 +39,7 @@ export const ExceptionApprovalQueue = () => {
 
   const fetchExceptions = async () => {
     try {
-      // Get exceptions with employee and attendance details
+      // Get exceptions with employee details
       const { data: exceptionsData, error } = await supabase
         .from('attendance_exceptions')
         .select('*')
@@ -54,20 +59,29 @@ export const ExceptionApprovalQueue = () => {
         .select('id, full_name')
         .in('id', employeeIds);
 
-      // Get attendance details  
-      const attendanceIds = [...new Set(exceptionsData.map(ex => ex.attendance_id))];
-      const { data: attendanceData } = await supabase
-        .from('attendance')
-        .select('id, date')
-        .in('id', attendanceIds);
+      // Get attendance details for exceptions that have attendance_id
+      const attendanceIds = exceptionsData
+        .filter(ex => ex.attendance_id)
+        .map(ex => ex.attendance_id!);
+      
+      let attendanceData = [];
+      if (attendanceIds.length > 0) {
+        const { data } = await supabase
+          .from('attendance')
+          .select('id, date')
+          .in('id', attendanceIds);
+        attendanceData = data || [];
+      }
 
       // Combine the data
       const exceptionsWithDetails: ExceptionRequest[] = exceptionsData.map(exception => ({
         ...exception,
-        exception_type: exception.exception_type as 'late_arrival' | 'early_departure',
+        exception_type: exception.exception_type as ExceptionRequest['exception_type'],
         status: exception.status as 'pending' | 'approved' | 'rejected',
         employee_name: employeesData?.find(emp => emp.id === exception.employee_id)?.full_name || 'Unknown Employee',
-        attendance_date: attendanceData?.find(att => att.id === exception.attendance_id)?.date || 'Unknown Date'
+        attendance_date: exception.target_date || 
+          attendanceData.find(att => att.id === exception.attendance_id)?.date || 
+          'Unknown Date'
       }));
 
       setExceptions(exceptionsWithDetails);
@@ -83,9 +97,13 @@ export const ExceptionApprovalQueue = () => {
   const handleApproval = async (id: string, status: 'approved' | 'rejected') => {
     setProcessingId(id);
     try {
+      const exception = exceptions.find(ex => ex.id === id);
+      if (!exception) throw new Error('Exception not found');
+
       const comments = adminComments[id] || '';
       
-      const { error } = await supabase
+      // Update the exception status
+      const { error: updateError } = await supabase
         .from('attendance_exceptions')
         .update({
           status,
@@ -95,7 +113,12 @@ export const ExceptionApprovalQueue = () => {
         })
         .eq('id', id);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
+
+      // If approved and it's a time correction exception, update/create attendance record
+      if (status === 'approved' && ['missed_clock_in', 'missed_clock_out', 'wrong_time'].includes(exception.exception_type)) {
+        await handleAttendanceCorrection(exception);
+      }
 
       toast({
         title: "Success",
@@ -112,11 +135,65 @@ export const ExceptionApprovalQueue = () => {
     } catch (error: any) {
       toast({
         title: "Error",
-        description: `Failed to ${status} exception request`,
+        description: `Failed to ${status} exception request: ${error.message}`,
         variant: "destructive"
       });
     } finally {
       setProcessingId(null);
+    }
+  };
+
+  const handleAttendanceCorrection = async (exception: ExceptionRequest) => {
+    try {
+      const targetDate = exception.target_date;
+      if (!targetDate) return;
+
+      // Check if attendance record exists for the date
+      const { data: existingAttendance } = await supabase
+        .from('attendance')
+        .select('*')
+        .eq('employee_id', exception.employee_id)
+        .eq('date', targetDate)
+        .single();
+
+      if (existingAttendance) {
+        // Update existing attendance record
+        const updates: any = {};
+        
+        if (exception.proposed_clock_in_time) {
+          updates.clock_in_time = exception.proposed_clock_in_time;
+        }
+        
+        if (exception.proposed_clock_out_time) {
+          updates.clock_out_time = exception.proposed_clock_out_time;
+        }
+
+        if (Object.keys(updates).length > 0) {
+          const { error } = await supabase
+            .from('attendance')
+            .update(updates)
+            .eq('id', existingAttendance.id);
+
+          if (error) throw error;
+        }
+      } else {
+        // Create new attendance record
+        const { error } = await supabase
+          .from('attendance')
+          .insert({
+            employee_id: exception.employee_id,
+            date: targetDate,
+            clock_in_time: exception.proposed_clock_in_time,
+            clock_out_time: exception.proposed_clock_out_time,
+            status: 'present',
+            notes: `Created via exception approval: ${exception.reason}`
+          });
+
+        if (error) throw error;
+      }
+    } catch (error) {
+      console.error('Error handling attendance correction:', error);
+      throw error;
     }
   };
 
@@ -160,7 +237,25 @@ export const ExceptionApprovalQueue = () => {
   };
 
   const getExceptionTypeLabel = (type: string) => {
-    return type === 'late_arrival' ? 'Late Arrival' : 'Early Departure';
+    const labels = {
+      'late_arrival': 'Late Arrival',
+      'early_departure': 'Early Departure',
+      'missed_clock_in': 'Missed Clock In',
+      'missed_clock_out': 'Missed Clock Out',
+      'wrong_time': 'Wrong Clock Time'
+    };
+    return labels[type as keyof typeof labels] || type;
+  };
+
+  const formatProposedTimes = (exception: ExceptionRequest) => {
+    const parts = [];
+    if (exception.proposed_clock_in_time) {
+      parts.push(`Clock In: ${format(new Date(exception.proposed_clock_in_time), 'HH:mm')}`);
+    }
+    if (exception.proposed_clock_out_time) {
+      parts.push(`Clock Out: ${format(new Date(exception.proposed_clock_out_time), 'HH:mm')}`);
+    }
+    return parts.join(' | ');
   };
 
   const pendingExceptions = exceptions.filter(ex => ex.status === 'pending');
@@ -189,6 +284,11 @@ export const ExceptionApprovalQueue = () => {
                       <p className="text-sm text-muted-foreground">
                         {getExceptionTypeLabel(exception.exception_type)} - {exception.attendance_date}
                       </p>
+                      {['missed_clock_in', 'missed_clock_out', 'wrong_time'].includes(exception.exception_type) && (
+                        <p className="text-sm font-medium text-primary">
+                          Proposed: {formatProposedTimes(exception)}
+                        </p>
+                      )}
                       <p className="text-sm">{exception.reason}</p>
                       {exception.document_url && (
                         <Button
@@ -259,6 +359,11 @@ export const ExceptionApprovalQueue = () => {
                     <p className="text-sm text-muted-foreground">
                       {getExceptionTypeLabel(exception.exception_type)} - {exception.attendance_date}
                     </p>
+                    {['missed_clock_in', 'missed_clock_out', 'wrong_time'].includes(exception.exception_type) && (
+                      <p className="text-xs text-muted-foreground">
+                        {formatProposedTimes(exception)}
+                      </p>
+                    )}
                     {exception.admin_comments && (
                       <p className="text-sm mt-1">
                         <strong>Admin notes:</strong> {exception.admin_comments}

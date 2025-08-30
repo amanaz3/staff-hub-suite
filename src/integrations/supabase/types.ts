@@ -100,44 +100,53 @@ export type Database = {
       attendance_exceptions: {
         Row: {
           admin_comments: string | null
-          attendance_id: string
+          attendance_id: string | null
           created_at: string
           document_url: string | null
           employee_id: string
           exception_type: string
           id: string
+          proposed_clock_in_time: string | null
+          proposed_clock_out_time: string | null
           reason: string
           reviewed_at: string | null
           reviewed_by: string | null
           status: string
+          target_date: string | null
           updated_at: string
         }
         Insert: {
           admin_comments?: string | null
-          attendance_id: string
+          attendance_id?: string | null
           created_at?: string
           document_url?: string | null
           employee_id: string
           exception_type: string
           id?: string
+          proposed_clock_in_time?: string | null
+          proposed_clock_out_time?: string | null
           reason: string
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string
+          target_date?: string | null
           updated_at?: string
         }
         Update: {
           admin_comments?: string | null
-          attendance_id?: string
+          attendance_id?: string | null
           created_at?: string
           document_url?: string | null
           employee_id?: string
           exception_type?: string
           id?: string
+          proposed_clock_in_time?: string | null
+          proposed_clock_out_time?: string | null
           reason?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string
+          target_date?: string | null
           updated_at?: string
         }
         Relationships: []
