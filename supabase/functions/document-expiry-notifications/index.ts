@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { Resend } from 'npm:resend@4.0.0';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -248,36 +249,88 @@ async function sendExpiryNotification(
     </div>
   `;
 
+  const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
+
   // Send notification to employee email (if available)
   if (document.employees?.email) {
     try {
-      await supabase.rpc('send_notification_email', {
-        p_to_email: document.employees.email,
-        p_subject: subject,
-        p_html_content: htmlContent
+      const { data, error } = await resend.emails.send({
+        from: 'HRFlow <onboarding@resend.dev>',
+        to: [document.employees.email],
+        subject: subject,
+        html: htmlContent,
       });
-      console.log(`Notification sent to employee: ${document.employees.email}`);
-    } catch (error) {
-      console.error(`Failed to send notification to employee ${document.employees.email}:`, error);
+
+      if (error) {
+        console.error(`Failed to send notification to employee ${document.employees.email}:`, error);
+        
+        // Log failed email
+        await supabase.from('email_logs').insert({
+          to_email: document.employees.email,
+          subject: subject,
+          content: htmlContent,
+          status: 'failed',
+          error_message: error.message
+        });
+      } else {
+        console.log(`Notification sent successfully to employee: ${document.employees.email}`);
+        
+        // Log successful email
+        await supabase.from('email_logs').insert({
+          to_email: document.employees.email,
+          subject: subject,
+          content: htmlContent,
+          status: 'sent',
+          sent_at: new Date().toISOString()
+        });
+      }
+    } catch (error: any) {
+      console.error(`Exception sending notification to employee ${document.employees.email}:`, error);
     }
   }
 
   // Send notification to admin emails
   for (const adminEmail of adminEmails) {
     try {
-      await supabase.rpc('send_notification_email', {
-        p_to_email: adminEmail,
-        p_subject: `[ADMIN] ${subject}`,
-        p_html_content: `
-          <div style="background-color: #e9ecef; padding: 10px; border-radius: 5px; margin-bottom: 20px;">
-            <strong>Admin Notification:</strong> This document expiry notification requires your attention.
-          </div>
-          ${htmlContent}
-        `
+      const adminHtmlContent = `
+        <div style="background-color: #e9ecef; padding: 10px; border-radius: 5px; margin-bottom: 20px;">
+          <strong>Admin Notification:</strong> This document expiry notification requires your attention.
+        </div>
+        ${htmlContent}
+      `;
+
+      const { data, error } = await resend.emails.send({
+        from: 'HRFlow <onboarding@resend.dev>',
+        to: [adminEmail],
+        subject: `[ADMIN] ${subject}`,
+        html: adminHtmlContent,
       });
-      console.log(`Admin notification sent to: ${adminEmail}`);
-    } catch (error) {
-      console.error(`Failed to send admin notification to ${adminEmail}:`, error);
+
+      if (error) {
+        console.error(`Failed to send admin notification to ${adminEmail}:`, error);
+        
+        // Log failed email
+        await supabase.from('email_logs').insert({
+          to_email: adminEmail,
+          subject: `[ADMIN] ${subject}`,
+          content: adminHtmlContent,
+          status: 'failed',
+          error_message: error.message
+        });
+      } else {
+        console.log(`Admin notification sent successfully to: ${adminEmail}`);
+        
+        // Log successful email
+        await supabase.from('email_logs').insert({
+          to_email: adminEmail,
+          subject: `[ADMIN] ${subject}`,
+          content: adminHtmlContent,
+          status: 'sent',
+          sent_at: new Date().toISOString()
+        });
+      }
+    } catch (error: any) {
+      console.error(`Exception sending admin notification to ${adminEmail}:`, error);
     }
   }
 }

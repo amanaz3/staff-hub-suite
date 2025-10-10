@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0';
+import { Resend } from 'npm:resend@4.0.0';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -99,21 +100,26 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
-    // Use Supabase's configured custom SMTP through a database function
-    const { data: emailResult, error: emailError } = await supabase.rpc('send_notification_email', {
-      p_to_email: recipientEmail,
-      p_subject: subject,
-      p_html_content: htmlContent
+    // Send email via Resend
+    const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
+    
+    const { data: emailResult, error: emailError } = await resend.emails.send({
+      from: 'HRFlow <onboarding@resend.dev>',
+      to: [recipientEmail],
+      subject: subject,
+      html: htmlContent,
     });
 
     if (emailError) {
-      console.error('Failed to send email via Supabase custom SMTP:', emailError);
+      console.error('Failed to send email via Resend:', emailError);
       
-      // Log the email content for manual review
-      console.log('Email content that failed to send:', {
-        to: recipientEmail,
+      // Log to database for audit trail
+      await supabase.from('email_logs').insert({
+        to_email: recipientEmail,
         subject: subject,
-        html: htmlContent
+        content: htmlContent,
+        status: 'failed',
+        error_message: emailError.message
       });
       
       return new Response(
@@ -128,7 +134,17 @@ const handler = async (req: Request): Promise<Response> => {
         }
       );
     }
-    console.log("Email sent successfully:", emailResult);
+    
+    console.log("Email sent successfully via Resend:", emailResult);
+    
+    // Log successful email to database
+    await supabase.from('email_logs').insert({
+      to_email: recipientEmail,
+      subject: subject,
+      content: htmlContent,
+      status: 'sent',
+      sent_at: new Date().toISOString()
+    });
 
     return new Response(
       JSON.stringify({ 
