@@ -158,6 +158,57 @@ export type Database = {
         }
         Relationships: []
       }
+      attendance_notification_log: {
+        Row: {
+          attendance_date: string
+          created_at: string | null
+          email_sent_at: string | null
+          email_status: string | null
+          employee_id: string
+          id: string
+          issue_details: Json
+          issues_detected: Json
+          notification_date: string
+        }
+        Insert: {
+          attendance_date: string
+          created_at?: string | null
+          email_sent_at?: string | null
+          email_status?: string | null
+          employee_id: string
+          id?: string
+          issue_details: Json
+          issues_detected: Json
+          notification_date: string
+        }
+        Update: {
+          attendance_date?: string
+          created_at?: string | null
+          email_sent_at?: string | null
+          email_status?: string | null
+          employee_id?: string
+          id?: string
+          issue_details?: Json
+          issues_detected?: Json
+          notification_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_notification_log_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employee_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_notification_log_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_logs: {
         Row: {
           content: string

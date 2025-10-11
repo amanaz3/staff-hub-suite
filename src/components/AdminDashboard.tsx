@@ -6,7 +6,8 @@ import { ExceptionApprovalQueue } from './ExceptionApprovalQueue';
 import { LeaveBalanceManagement } from './LeaveBalanceManagement';
 import { LeaveManagement } from './LeaveManagement';
 import { AttendanceReport } from './AttendanceReport';
-import { Clock, Shield, AlertTriangle, Calendar, FileText, ClipboardList } from 'lucide-react';
+import { Clock, Shield, AlertTriangle, Calendar, FileText, ClipboardList, Bell } from 'lucide-react';
+import { AttendanceNotificationLog } from './AttendanceNotificationLog';
 
 interface AdminDashboardProps {
   userRole: 'admin' | 'staff';
@@ -22,7 +23,7 @@ export const AdminDashboard = ({ userRole }: AdminDashboardProps) => {
   return (
     <div className="space-y-6">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="leave" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
             Leave Requests
@@ -46,6 +47,10 @@ export const AdminDashboard = ({ userRole }: AdminDashboardProps) => {
           <TabsTrigger value="attendance-report" className="flex items-center gap-2">
             <ClipboardList className="h-4 w-4" />
             Attendance Report
+          </TabsTrigger>
+          <TabsTrigger value="notification-log" className="flex items-center gap-2">
+            <Bell className="h-4 w-4" />
+            Notification Log
           </TabsTrigger>
         </TabsList>
 
@@ -71,6 +76,10 @@ export const AdminDashboard = ({ userRole }: AdminDashboardProps) => {
 
         <TabsContent value="attendance-report" className="mt-6">
           <AttendanceReport />
+        </TabsContent>
+
+        <TabsContent value="notification-log" className="mt-6">
+          <AttendanceNotificationLog />
         </TabsContent>
       </Tabs>
     </div>
