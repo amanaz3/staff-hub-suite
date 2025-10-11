@@ -104,7 +104,7 @@ const handler = async (req: Request): Promise<Response> => {
     const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
     
     const { data: emailResult, error: emailError } = await resend.emails.send({
-      from: 'HRFlow <onboarding@resend.dev>',
+      from: 'HRFlow <noreply@amanacorporate.com>',
       to: [recipientEmail],
       subject: subject,
       html: htmlContent,

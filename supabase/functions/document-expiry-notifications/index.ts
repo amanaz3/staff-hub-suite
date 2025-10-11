@@ -255,7 +255,7 @@ async function sendExpiryNotification(
   if (document.employees?.email) {
     try {
       const { data, error } = await resend.emails.send({
-        from: 'HRFlow <onboarding@resend.dev>',
+        from: 'HRFlow <noreply@amanacorporate.com>',
         to: [document.employees.email],
         subject: subject,
         html: htmlContent,
@@ -300,7 +300,7 @@ async function sendExpiryNotification(
       `;
 
       const { data, error } = await resend.emails.send({
-        from: 'HRFlow <onboarding@resend.dev>',
+        from: 'HRFlow <noreply@amanacorporate.com>',
         to: [adminEmail],
         subject: `[ADMIN] ${subject}`,
         html: adminHtmlContent,

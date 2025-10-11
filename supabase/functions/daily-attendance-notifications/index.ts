@@ -211,7 +211,7 @@ const handler = async (req: Request): Promise<Response> => {
         );
 
         const emailResponse = await resend.emails.send({
-          from: "HRFlow <onboarding@resend.dev>",
+          from: "HRFlow <noreply@amanacorporate.com>",
           to: [notification.email],
           subject: `Attendance Notice - ${new Date(targetDate).toLocaleDateString()}`,
           html: emailHtml,
