@@ -2,6 +2,22 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.55.0";
 import { Resend } from "npm:resend@2.0.0";
 
+// Helper function to get day name from date
+function getDayName(date: Date): string {
+  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  return days[date.getDay()];
+}
+
+// Helper function to check if a date is a working day
+function isWorkingDay(date: Date, workingDays: string[]): boolean {
+  if (!workingDays || workingDays.length === 0) {
+    // Default: All days except Sunday
+    return date.getDay() !== 0;
+  }
+  const dayName = getDayName(date);
+  return workingDays.includes(dayName);
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -59,6 +75,7 @@ const handler = async (req: Request): Promise<Response> => {
           start_time,
           end_time,
           minimum_daily_hours,
+          working_days,
           is_active
         )
       `)
@@ -93,7 +110,17 @@ const handler = async (req: Request): Promise<Response> => {
         ? employee.work_schedules[0] 
         : employee.work_schedules;
       
-      if (!schedule) continue;
+      if (!schedule) {
+        console.log(`No schedule found for employee ${employee.full_name}`);
+        continue;
+      }
+
+      // Check if yesterday was a working day for this employee
+      const yesterdayDate = new Date(targetDate + "T00:00:00Z");
+      if (!isWorkingDay(yesterdayDate, schedule.working_days || [])) {
+        console.log(`Skipping ${employee.full_name} - ${getDayName(yesterdayDate)} is not a working day`);
+        continue;
+      }
 
       const attendance = attendanceRecords?.find(a => a.employee_id === employee.id);
       const issues: AttendanceIssue[] = [];

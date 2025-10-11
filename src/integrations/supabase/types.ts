@@ -564,6 +564,7 @@ export type Database = {
           minimum_daily_hours: number
           start_time: string
           updated_at: string
+          working_days: string[] | null
         }
         Insert: {
           created_at?: string
@@ -574,6 +575,7 @@ export type Database = {
           minimum_daily_hours?: number
           start_time?: string
           updated_at?: string
+          working_days?: string[] | null
         }
         Update: {
           created_at?: string
@@ -584,6 +586,7 @@ export type Database = {
           minimum_daily_hours?: number
           start_time?: string
           updated_at?: string
+          working_days?: string[] | null
         }
         Relationships: []
       }

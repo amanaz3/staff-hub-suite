@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Clock, Plus, Save, Edit } from 'lucide-react';
@@ -14,6 +15,7 @@ interface WorkSchedule {
   start_time: string;
   end_time: string;
   minimum_daily_hours: number;
+  working_days: string[];
   is_active: boolean;
   employee_name?: string;
 }
@@ -31,6 +33,9 @@ export const WorkScheduleManagement = () => {
   const [startTime, setStartTime] = useState('09:00');
   const [endTime, setEndTime] = useState('17:00');
   const [minimumHours, setMinimumHours] = useState(8);
+  const [workingDays, setWorkingDays] = useState<string[]>([
+    'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
+  ]);
   const [editingSchedule, setEditingSchedule] = useState<WorkSchedule | null>(null);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -99,6 +104,15 @@ export const WorkScheduleManagement = () => {
     e.preventDefault();
     if (!selectedEmployeeId && !editingSchedule) return;
 
+    if (workingDays.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please select at least one working day",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       const scheduleData = {
@@ -106,6 +120,7 @@ export const WorkScheduleManagement = () => {
         start_time: startTime,
         end_time: endTime,
         minimum_daily_hours: minimumHours,
+        working_days: workingDays,
         is_active: true
       };
 
@@ -169,6 +184,7 @@ export const WorkScheduleManagement = () => {
     setStartTime('09:00');
     setEndTime('17:00');
     setMinimumHours(8);
+    setWorkingDays(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']);
     setEditingSchedule(null);
   };
 
@@ -177,6 +193,7 @@ export const WorkScheduleManagement = () => {
     setStartTime(schedule.start_time);
     setEndTime(schedule.end_time);
     setMinimumHours(schedule.minimum_daily_hours);
+    setWorkingDays(schedule.working_days || ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']);
   };
 
   const getAvailableEmployees = () => {
@@ -247,6 +264,30 @@ export const WorkScheduleManagement = () => {
                 />
               </div>
             </div>
+
+            <div className="space-y-2">
+              <Label>Working Days *</Label>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 p-4 border rounded-md">
+                {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((day) => (
+                  <div key={day} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={day}
+                      checked={workingDays.includes(day)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setWorkingDays([...workingDays, day]);
+                        } else {
+                          setWorkingDays(workingDays.filter(d => d !== day));
+                        }
+                      }}
+                    />
+                    <Label htmlFor={day} className="cursor-pointer font-normal">
+                      {day}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
             
             <div className="flex gap-2">
               <Button type="submit" disabled={loading}>
@@ -279,6 +320,9 @@ export const WorkScheduleManagement = () => {
                     <p className="text-sm text-muted-foreground">
                       {schedule.start_time} - {schedule.end_time} | 
                       Minimum: {schedule.minimum_daily_hours}h
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Working: {schedule.working_days?.join(', ') || 'Not set'}
                     </p>
                   </div>
                   <Button
