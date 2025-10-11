@@ -209,6 +209,30 @@ export type Database = {
           },
         ]
       }
+      divisions: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       email_logs: {
         Row: {
           content: string
@@ -279,6 +303,7 @@ export type Database = {
         Row: {
           created_at: string | null
           department: string
+          division: string | null
           email: string
           employee_id: string
           full_name: string
@@ -288,6 +313,7 @@ export type Database = {
           phone: string | null
           position: string
           salary: number | null
+          staff_id: string | null
           status: string
           updated_at: string | null
           user_id: string | null
@@ -296,6 +322,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           department: string
+          division?: string | null
           email: string
           employee_id: string
           full_name: string
@@ -305,6 +332,7 @@ export type Database = {
           phone?: string | null
           position: string
           salary?: number | null
+          staff_id?: string | null
           status?: string
           updated_at?: string | null
           user_id?: string | null
@@ -313,6 +341,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           department?: string
+          division?: string | null
           email?: string
           employee_id?: string
           full_name?: string
@@ -322,6 +351,7 @@ export type Database = {
           phone?: string | null
           position?: string
           salary?: number | null
+          staff_id?: string | null
           status?: string
           updated_at?: string | null
           user_id?: string | null

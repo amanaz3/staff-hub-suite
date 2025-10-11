@@ -11,6 +11,8 @@ interface InviteUserRequest {
   email: string;
   full_name: string;
   role: string;
+  staff_id: string;
+  division: string;
   department: string;
   position: string;
 }
@@ -22,13 +24,50 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { email, full_name, role, department, position }: InviteUserRequest = await req.json();
+    const { email, full_name, role, staff_id, division, department, position }: InviteUserRequest = await req.json();
+
+    // Validate staff_id format (must be 4 digits)
+    if (!/^\d{4}$/.test(staff_id)) {
+      return new Response(
+        JSON.stringify({ error: "Staff ID must be 4 digits (e.g., 0032)" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
 
     // Create Supabase client with service role for admin operations
     const supabaseServiceRole = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
+
+    // Check staff_id uniqueness
+    const { data: existingStaff } = await supabaseServiceRole
+      .from('employees')
+      .select('staff_id')
+      .eq('staff_id', staff_id)
+      .maybeSingle();
+
+    if (existingStaff) {
+      return new Response(
+        JSON.stringify({ error: `Staff ID ${staff_id} is already in use` }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    // Upsert division into divisions table if new
+    const { error: divisionError } = await supabaseServiceRole
+      .from('divisions')
+      .upsert({ name: division }, { onConflict: 'name' });
+
+    if (divisionError) {
+      console.error("Warning: Could not add division to lookup table:", divisionError);
+    }
 
     // Create the user account
     const { data: authData, error: authError } = await supabaseServiceRole.auth.admin.createUser({
@@ -38,6 +77,8 @@ const handler = async (req: Request): Promise<Response> => {
       user_metadata: {
         full_name,
         role,
+        staff_id,
+        division,
         department,
         position
       }

@@ -13,13 +13,15 @@ import { UserPlus, Users } from 'lucide-react';
 interface Employee {
   id: string;
   employee_id: string;
+  staff_id?: string;
   full_name: string;
-  email?: string; // Optional since directory view doesn't include email
+  email?: string;
   department: string;
+  division?: string;
   position: string;
   status: string;
-  hire_date?: string; // Optional
-  wfh_enabled?: boolean; // Optional
+  hire_date?: string;
+  wfh_enabled?: boolean;
 }
 
 export const UserManagement = () => {
@@ -28,6 +30,10 @@ export const UserManagement = () => {
   const [inviting, setInviting] = useState(false);
   const { toast } = useToast();
   const [profile, setProfile] = useState<any>(null);
+  const [divisions, setDivisions] = useState<string[]>([]);
+  const [isAddingNewDivision, setIsAddingNewDivision] = useState(false);
+  const [newDivisionName, setNewDivisionName] = useState('');
+  const [staffIdError, setStaffIdError] = useState('');
   
   // Check if user is admin
   const isAdmin = profile?.role === 'admin';
@@ -37,6 +43,8 @@ export const UserManagement = () => {
     email: '',
     full_name: '',
     role: 'staff',
+    staff_id: '',
+    division: '',
     department: '',
     position: ''
   });
@@ -56,6 +64,25 @@ export const UserManagement = () => {
     };
     getCurrentUserProfile();
   }, []);
+
+  // Fetch divisions for dropdown
+  useEffect(() => {
+    const fetchDivisions = async () => {
+      const { data, error } = await supabase
+        .from('divisions')
+        .select('name')
+        .eq('is_active', true)
+        .order('name');
+      
+      if (!error && data) {
+        setDivisions(data.map(d => d.name));
+      }
+    };
+    
+    if (isAdmin) {
+      fetchDivisions();
+    }
+  }, [isAdmin]);
 
   const fetchEmployees = async () => {
     try {
@@ -100,8 +127,61 @@ export const UserManagement = () => {
     }
   }, [profile, isAdmin]);
 
+  const validateStaffId = (value: string) => {
+    if (!/^\d{4}$/.test(value)) {
+      setStaffIdError('Staff ID must be 4 digits (e.g., 0032)');
+      return false;
+    }
+    setStaffIdError('');
+    return true;
+  };
+
+  const handleStaffIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setFormData({ ...formData, staff_id: value });
+    if (value) validateStaffId(value);
+  };
+
+  const handleAddNewDivision = async () => {
+    if (!newDivisionName.trim()) return;
+    
+    const { error } = await supabase
+      .from('divisions')
+      .insert({ name: newDivisionName.trim() });
+    
+    if (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to add division',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    setDivisions([...divisions, newDivisionName.trim()].sort());
+    setFormData({ ...formData, division: newDivisionName.trim() });
+    setNewDivisionName('');
+    setIsAddingNewDivision(false);
+    
+    toast({
+      title: 'Success',
+      description: 'Division added successfully',
+    });
+  };
+
   const handleInviteUser = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate staff_id before submitting
+    if (!validateStaffId(formData.staff_id)) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please enter a valid 4-digit Staff ID',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setInviting(true);
 
     try {
@@ -121,9 +201,12 @@ export const UserManagement = () => {
         email: '',
         full_name: '',
         role: 'staff',
+        staff_id: '',
+        division: '',
         department: '',
         position: ''
       });
+      setStaffIdError('');
 
       // Refresh employees list
       fetchEmployees();
@@ -161,7 +244,7 @@ export const UserManagement = () => {
           <form onSubmit={handleInviteUser} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">Email *</Label>
                 <Input
                   id="email"
                   type="email"
@@ -171,7 +254,7 @@ export const UserManagement = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="full_name">Full Name</Label>
+                <Label htmlFor="full_name">Full Name *</Label>
                 <Input
                   id="full_name"
                   value={formData.full_name}
@@ -180,7 +263,22 @@ export const UserManagement = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="role">Role</Label>
+                <Label htmlFor="staff_id">Staff ID *</Label>
+                <Input
+                  id="staff_id"
+                  value={formData.staff_id}
+                  onChange={handleStaffIdChange}
+                  placeholder="e.g., 0032"
+                  maxLength={4}
+                  required
+                  className="font-mono"
+                />
+                {staffIdError && (
+                  <p className="text-sm text-destructive">{staffIdError}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="role">Role *</Label>
                 <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value })}>
                   <SelectTrigger>
                     <SelectValue />
@@ -192,7 +290,65 @@ export const UserManagement = () => {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="department">Department</Label>
+                <Label htmlFor="division">Division *</Label>
+                {!isAddingNewDivision ? (
+                  <div className="flex gap-2">
+                    <Select 
+                      value={formData.division} 
+                      onValueChange={(value) => {
+                        if (value === '__add_new__') {
+                          setIsAddingNewDivision(true);
+                        } else {
+                          setFormData({ ...formData, division: value });
+                        }
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select division" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {divisions.map((div) => (
+                          <SelectItem key={div} value={div}>
+                            {div}
+                          </SelectItem>
+                        ))}
+                        <SelectItem value="__add_new__">
+                          + Add New Division
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <Input
+                      value={newDivisionName}
+                      onChange={(e) => setNewDivisionName(e.target.value)}
+                      placeholder="Enter new division name"
+                      autoFocus
+                    />
+                    <Button 
+                      type="button" 
+                      onClick={handleAddNewDivision}
+                      size="sm"
+                    >
+                      Add
+                    </Button>
+                    <Button 
+                      type="button" 
+                      variant="outline"
+                      onClick={() => {
+                        setIsAddingNewDivision(false);
+                        setNewDivisionName('');
+                      }}
+                      size="sm"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="department">Department *</Label>
                 <Input
                   id="department"
                   value={formData.department}
@@ -201,7 +357,7 @@ export const UserManagement = () => {
                 />
               </div>
               <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="position">Position</Label>
+                <Label htmlFor="position">Designation *</Label>
                 <Input
                   id="position"
                   value={formData.position}
@@ -236,10 +392,12 @@ export const UserManagement = () => {
               <TableHeader>
                   <TableRow>
                     <TableHead>Employee ID</TableHead>
+                    <TableHead>Staff ID</TableHead>
                     <TableHead>Name</TableHead>
                     {isAdmin && <TableHead>Email</TableHead>}
+                    <TableHead>Division</TableHead>
                     <TableHead>Department</TableHead>
-                    <TableHead>Position</TableHead>
+                    <TableHead>Designation</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Hire Date</TableHead>
                   </TableRow>
@@ -248,8 +406,10 @@ export const UserManagement = () => {
                 {employees.map((employee) => (
                   <TableRow key={employee.id}>
                     <TableCell className="font-medium">{employee.employee_id}</TableCell>
+                    <TableCell className="font-mono">{employee.staff_id || 'N/A'}</TableCell>
                     <TableCell>{employee.full_name}</TableCell>
                     {isAdmin && <TableCell>{employee.email || 'N/A'}</TableCell>}
+                    <TableCell>{employee.division || 'N/A'}</TableCell>
                     <TableCell>{employee.department}</TableCell>
                     <TableCell>{employee.position}</TableCell>
                     <TableCell>
