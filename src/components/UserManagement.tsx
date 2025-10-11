@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { UserPlus, Users } from 'lucide-react';
+import { UserPlus, Users, KeyRound, Loader2 } from 'lucide-react';
 
 interface Employee {
   id: string;
@@ -28,6 +28,7 @@ export const UserManagement = () => {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [inviting, setInviting] = useState(false);
+  const [resettingPassword, setResettingPassword] = useState<string | null>(null);
   const { toast } = useToast();
   const [profile, setProfile] = useState<any>(null);
   const [divisions, setDivisions] = useState<string[]>([]);
@@ -167,6 +168,50 @@ export const UserManagement = () => {
       title: 'Success',
       description: 'Division added successfully',
     });
+  };
+
+  const handleResetPassword = async (employee: Employee) => {
+    if (!employee.email) {
+      toast({
+        title: 'Error',
+        description: 'Employee email not found',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!window.confirm(
+      `Send password reset link to ${employee.full_name} (${employee.email})?`
+    )) {
+      return;
+    }
+
+    setResettingPassword(employee.id);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-reset-password', {
+        body: {
+          user_email: employee.email,
+          user_name: employee.full_name
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: `Password reset link sent to ${employee.email}`,
+      });
+    } catch (error: any) {
+      console.error('Error resetting password:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to send password reset link',
+        variant: 'destructive',
+      });
+    } finally {
+      setResettingPassword(null);
+    }
   };
 
   const handleInviteUser = async (e: React.FormEvent) => {
@@ -400,6 +445,7 @@ export const UserManagement = () => {
                     <TableHead>Designation</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Hire Date</TableHead>
+                    {isAdmin && <TableHead>Actions</TableHead>}
                   </TableRow>
               </TableHeader>
               <TableBody>
@@ -418,6 +464,29 @@ export const UserManagement = () => {
                       </Badge>
                     </TableCell>
                     <TableCell>{employee.hire_date ? new Date(employee.hire_date).toLocaleDateString() : 'N/A'}</TableCell>
+                    {isAdmin && (
+                      <TableCell>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleResetPassword(employee)}
+                          disabled={resettingPassword === employee.id || !employee.email}
+                          className="gap-2"
+                        >
+                          {resettingPassword === employee.id ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              Sending...
+                            </>
+                          ) : (
+                            <>
+                              <KeyRound className="h-4 w-4" />
+                              Reset Password
+                            </>
+                          )}
+                        </Button>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>
