@@ -13,7 +13,15 @@ interface ExceptionRequest {
   id: string;
   attendance_id: string | null;
   employee_id: string;
-  exception_type: 'late_arrival' | 'early_departure' | 'missed_clock_in' | 'missed_clock_out' | 'wrong_time';
+  exception_type: 
+    | 'short_permission_personal' 
+    | 'short_permission_official' 
+    | 'wfh'
+    | 'missed_clock_in' 
+    | 'missed_clock_out' 
+    | 'wrong_time'
+    | 'late_arrival'
+    | 'early_departure';
   reason: string;
   document_url: string | null;
   status: 'pending' | 'approved' | 'rejected';
@@ -22,6 +30,7 @@ interface ExceptionRequest {
   target_date: string | null;
   proposed_clock_in_time: string | null;
   proposed_clock_out_time: string | null;
+  duration_hours: number | null;
   employee_name?: string;
   attendance_date?: string;
 }
@@ -145,8 +154,9 @@ export const ExceptionApprovalQueue = () => {
         // Don't fail the whole operation if email fails
       }
 
-      // If approved and it's a time correction exception, update/create attendance record
-      if (status === 'approved' && ['missed_clock_in', 'missed_clock_out', 'wrong_time'].includes(exception.exception_type)) {
+      // Only run attendance correction for time-based exceptions
+      const timeBasedTypes = ['missed_clock_in', 'missed_clock_out', 'wrong_time'];
+      if (status === 'approved' && timeBasedTypes.includes(exception.exception_type)) {
         await handleAttendanceCorrection(exception);
       }
 
@@ -268,11 +278,14 @@ export const ExceptionApprovalQueue = () => {
 
   const getExceptionTypeLabel = (type: string) => {
     const labels = {
-      'late_arrival': 'Late Arrival',
-      'early_departure': 'Early Departure',
+      'short_permission_personal': 'Short Permission (Personal)',
+      'short_permission_official': 'Short Permission (Official)',
+      'wfh': 'Work from Home (WFH)',
       'missed_clock_in': 'Missed Clock In',
       'missed_clock_out': 'Missed Clock Out',
-      'wrong_time': 'Wrong Clock Time'
+      'wrong_time': 'Wrong Clock Time',
+      'late_arrival': 'Late Arrival (Legacy)',
+      'early_departure': 'Early Departure (Legacy)'
     };
     return labels[type as keyof typeof labels] || type;
   };
@@ -314,6 +327,11 @@ export const ExceptionApprovalQueue = () => {
                       <p className="text-sm text-muted-foreground">
                         {getExceptionTypeLabel(exception.exception_type)} - {exception.attendance_date}
                       </p>
+                      {exception.exception_type === 'short_permission_personal' && exception.duration_hours && (
+                        <p className="text-sm font-medium text-primary">
+                          Duration: {exception.duration_hours} hour{exception.duration_hours !== 1 ? 's' : ''}
+                        </p>
+                      )}
                       {['missed_clock_in', 'missed_clock_out', 'wrong_time'].includes(exception.exception_type) && (
                         <p className="text-sm font-medium text-primary">
                           Proposed: {formatProposedTimes(exception)}
@@ -389,6 +407,11 @@ export const ExceptionApprovalQueue = () => {
                     <p className="text-sm text-muted-foreground">
                       {getExceptionTypeLabel(exception.exception_type)} - {exception.attendance_date}
                     </p>
+                    {exception.exception_type === 'short_permission_personal' && exception.duration_hours && (
+                      <p className="text-xs text-muted-foreground">
+                        Duration: {exception.duration_hours} hours
+                      </p>
+                    )}
                     {['missed_clock_in', 'missed_clock_out', 'wrong_time'].includes(exception.exception_type) && (
                       <p className="text-xs text-muted-foreground">
                         {formatProposedTimes(exception)}

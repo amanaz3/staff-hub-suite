@@ -110,6 +110,7 @@ export type Database = {
           attendance_id: string | null
           created_at: string
           document_url: string | null
+          duration_hours: number | null
           employee_id: string
           exception_type: string
           id: string
@@ -127,6 +128,7 @@ export type Database = {
           attendance_id?: string | null
           created_at?: string
           document_url?: string | null
+          duration_hours?: number | null
           employee_id: string
           exception_type: string
           id?: string
@@ -144,6 +146,7 @@ export type Database = {
           attendance_id?: string | null
           created_at?: string
           document_url?: string | null
+          duration_hours?: number | null
           employee_id?: string
           exception_type?: string
           id?: string

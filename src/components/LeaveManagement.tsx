@@ -367,7 +367,17 @@ export const LeaveManagement = ({ userRole }: LeaveManagementProps) => {
   };
 
   const formatExceptionType = (type: string) => {
-    return type.split('_').map(word => 
+    const typeLabels = {
+      'short_permission_personal': 'Short Permission (Personal)',
+      'short_permission_official': 'Short Permission (Official)',
+      'wfh': 'Work from Home (WFH)',
+      'missed_clock_in': 'Missed Clock In',
+      'missed_clock_out': 'Missed Clock Out',
+      'wrong_time': 'Wrong Clock In/Out Time',
+      'late_arrival': 'Late Arrival (Legacy)',
+      'early_departure': 'Early Departure (Legacy)'
+    };
+    return typeLabels[type as keyof typeof typeLabels] || type.split('_').map(word => 
       word.charAt(0).toUpperCase() + word.slice(1)
     ).join(' ');
   };

@@ -21,13 +21,14 @@ interface ExceptionRequestFormProps {
 }
 
 export const ExceptionRequestForm = ({ attendanceId, employeeId, onSuccess }: ExceptionRequestFormProps) => {
-  const [exceptionType, setExceptionType] = useState<'late_arrival' | 'early_departure' | 'missed_clock_in' | 'missed_clock_out' | 'wrong_time' | ''>('');
+  const [exceptionType, setExceptionType] = useState<'short_permission_personal' | 'short_permission_official' | 'wfh' | 'missed_clock_in' | 'missed_clock_out' | 'wrong_time' | ''>('');
   const [reason, setReason] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [targetDate, setTargetDate] = useState<Date>();
   const [proposedClockIn, setProposedClockIn] = useState('');
   const [proposedClockOut, setProposedClockOut] = useState('');
+  const [durationHours, setDurationHours] = useState('');
   const { toast } = useToast();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -81,18 +82,68 @@ export const ExceptionRequestForm = ({ attendanceId, employeeId, onSuccess }: Ex
     e.preventDefault();
     if (!exceptionType || !reason.trim()) return;
 
-    // Validation for exception types that need date/time
-    if (['late_arrival', 'early_departure', 'missed_clock_in', 'missed_clock_out', 'wrong_time'].includes(exceptionType)) {
-      if (!targetDate) {
-        toast({
-          title: "Error",
-          description: "Target date is required for this exception type",
-          variant: "destructive"
-        });
-        return;
-      }
+    const isNewPermissionType = ['short_permission_personal', 'short_permission_official', 'wfh'].includes(exceptionType);
+    const isTimeBasedType = ['missed_clock_in', 'missed_clock_out', 'wrong_time'].includes(exceptionType);
 
-      if (['late_arrival', 'missed_clock_in'].includes(exceptionType) && !proposedClockIn) {
+    if (!targetDate) {
+      toast({
+        title: "Error",
+        description: "Target date is required",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validation for new permission types
+    if (isNewPermissionType) {
+      if (exceptionType === 'short_permission_personal') {
+        const hours = parseFloat(durationHours);
+        if (!durationHours || isNaN(hours) || hours <= 0 || hours > 2.5) {
+          toast({
+            title: "Error",
+            description: "Duration must be between 0.5 and 2.5 hours",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        // Check existing approved permissions for the same date
+        try {
+          const { data: existingPermissions, error: checkError } = await supabase
+            .from('attendance_exceptions')
+            .select('duration_hours')
+            .eq('employee_id', employeeId)
+            .eq('exception_type', 'short_permission_personal')
+            .eq('target_date', format(targetDate, 'yyyy-MM-dd'))
+            .in('status', ['pending', 'approved']);
+
+          if (checkError) throw checkError;
+
+          const totalExistingHours = existingPermissions?.reduce(
+            (sum, perm) => sum + (Number(perm.duration_hours) || 0), 
+            0
+          ) || 0;
+
+          if (totalExistingHours + hours > 2.5) {
+            toast({
+              title: "Error",
+              description: `You already have ${totalExistingHours} hours for this date. Total would exceed 2.5 hours daily limit.`,
+              variant: "destructive"
+            });
+            return;
+          }
+        } catch (error) {
+          console.error('Error checking existing permissions:', error);
+        }
+      }
+    }
+
+    // Validation for time-based exceptions
+    if (isTimeBasedType) {
+      const needsClockIn = exceptionType === 'missed_clock_in' || exceptionType === 'wrong_time';
+      const needsClockOut = exceptionType === 'missed_clock_out' || exceptionType === 'wrong_time';
+
+      if (needsClockIn && !proposedClockIn) {
         toast({
           title: "Error",
           description: "Proposed clock-in time is required",
@@ -101,19 +152,10 @@ export const ExceptionRequestForm = ({ attendanceId, employeeId, onSuccess }: Ex
         return;
       }
 
-      if (['early_departure', 'missed_clock_out'].includes(exceptionType) && !proposedClockOut) {
+      if (needsClockOut && !proposedClockOut) {
         toast({
           title: "Error",
           description: "Proposed clock-out time is required",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      if (exceptionType === 'wrong_time' && (!proposedClockIn || !proposedClockOut)) {
-        toast({
-          title: "Error",
-          description: "Both proposed clock-in and clock-out times are required for wrong time correction",
           variant: "destructive"
         });
         return;
@@ -149,19 +191,35 @@ export const ExceptionRequestForm = ({ attendanceId, employeeId, onSuccess }: Ex
         }
       }
 
+      const insertData: any = {
+        attendance_id: attendanceId || null,
+        employee_id: employeeId,
+        exception_type: exceptionType,
+        reason: reason.trim(),
+        document_url: documentUrl,
+        status: 'pending',
+        target_date: format(targetDate, 'yyyy-MM-dd')
+      };
+
+      // Add duration_hours only for Personal Short Permission
+      if (exceptionType === 'short_permission_personal') {
+        insertData.duration_hours = parseFloat(durationHours);
+      }
+
+      // Add time fields only for time-based exceptions
+      const isTimeBasedType = ['missed_clock_in', 'missed_clock_out', 'wrong_time'].includes(exceptionType);
+      if (isTimeBasedType) {
+        if (proposedInTime) {
+          insertData.proposed_clock_in_time = proposedInTime.toISOString();
+        }
+        if (proposedOutTime) {
+          insertData.proposed_clock_out_time = proposedOutTime.toISOString();
+        }
+      }
+
       const { error } = await supabase
         .from('attendance_exceptions')
-        .insert({
-          attendance_id: attendanceId || null,
-          employee_id: employeeId,
-          exception_type: exceptionType,
-          reason: reason.trim(),
-          document_url: documentUrl,
-          status: 'pending',
-          target_date: targetDate ? format(targetDate, 'yyyy-MM-dd') : null,
-          proposed_clock_in_time: proposedInTime?.toISOString(),
-          proposed_clock_out_time: proposedOutTime?.toISOString()
-        });
+        .insert(insertData);
 
       if (error) throw error;
 
@@ -213,6 +271,7 @@ export const ExceptionRequestForm = ({ attendanceId, employeeId, onSuccess }: Ex
       setReason('');
       setFile(null);
       setTargetDate(undefined);
+      setDurationHours('');
       setProposedClockIn('');
       setProposedClockOut('');
       
@@ -234,9 +293,9 @@ export const ExceptionRequestForm = ({ attendanceId, employeeId, onSuccess }: Ex
     setFile(null);
   };
 
-  const needsDateTime = ['late_arrival', 'early_departure', 'missed_clock_in', 'missed_clock_out', 'wrong_time'].includes(exceptionType);
-  const needsClockIn = ['late_arrival', 'missed_clock_in', 'wrong_time'].includes(exceptionType);
-  const needsClockOut = ['early_departure', 'missed_clock_out', 'wrong_time'].includes(exceptionType);
+  const needsDateTime = exceptionType && !['short_permission_personal', 'short_permission_official', 'wfh'].includes(exceptionType);
+  const needsClockIn = exceptionType === 'missed_clock_in' || exceptionType === 'wrong_time';
+  const needsClockOut = exceptionType === 'missed_clock_out' || exceptionType === 'wrong_time';
 
   return (
     <Card>
@@ -255,8 +314,12 @@ export const ExceptionRequestForm = ({ attendanceId, employeeId, onSuccess }: Ex
                 <SelectValue placeholder="Select exception type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="late_arrival">Late Arrival</SelectItem>
-                <SelectItem value="early_departure">Early Departure</SelectItem>
+                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Permission Requests</div>
+                <SelectItem value="short_permission_personal">Short Permission (Personal)</SelectItem>
+                <SelectItem value="short_permission_official">Short Permission (Official)</SelectItem>
+                <SelectItem value="wfh">Work from Home (WFH)</SelectItem>
+                <div className="my-1 h-px bg-border" />
+                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Attendance Corrections</div>
                 <SelectItem value="missed_clock_in">Missed Clock In</SelectItem>
                 <SelectItem value="missed_clock_out">Missed Clock Out</SelectItem>
                 <SelectItem value="wrong_time">Wrong Clock In/Out Time</SelectItem>
@@ -264,36 +327,58 @@ export const ExceptionRequestForm = ({ attendanceId, employeeId, onSuccess }: Ex
             </Select>
           </div>
 
+          {!exceptionType ? null : (
+            <div>
+              <Label>Target Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !targetDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {targetDate ? format(targetDate, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={targetDate}
+                    onSelect={setTargetDate}
+                    disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          )}
+
+          {exceptionType === 'short_permission_personal' && (
+            <div>
+              <Label htmlFor="duration">Duration (Hours) *</Label>
+              <Input
+                id="duration"
+                type="number"
+                step="0.5"
+                min="0.5"
+                max="2.5"
+                value={durationHours}
+                onChange={(e) => setDurationHours(e.target.value)}
+                placeholder="e.g., 1.5"
+                required
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Maximum 2.5 hours allowed per day for personal short permission
+              </p>
+            </div>
+          )}
+
           {needsDateTime && (
             <>
-              <div>
-                <Label>Target Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !targetDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {targetDate ? format(targetDate, "PPP") : <span>Pick a date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={targetDate}
-                      onSelect={setTargetDate}
-                      disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
-                      initialFocus
-                      className={cn("p-3 pointer-events-auto")}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {needsClockIn && (
                   <div>
@@ -384,7 +469,18 @@ export const ExceptionRequestForm = ({ attendanceId, employeeId, onSuccess }: Ex
             </div>
           </div>
 
-          <Button type="submit" disabled={loading || !exceptionType || !reason.trim()}>
+          <Button 
+            type="submit" 
+            disabled={
+              loading || 
+              !exceptionType || 
+              !reason.trim() || 
+              !targetDate ||
+              (exceptionType === 'short_permission_personal' && !durationHours) ||
+              (needsClockIn && !proposedClockIn) ||
+              (needsClockOut && !proposedClockOut)
+            }
+          >
             {loading ? 'Submitting...' : 'Submit Request'}
           </Button>
         </form>
