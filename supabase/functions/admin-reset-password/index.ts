@@ -42,13 +42,14 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const { data: profile, error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .select('role')
-      .eq('user_id', requestingUser.id)
-      .single();
+    // Check if requesting user has admin role using has_role function
+    const { data: hasAdminRole, error: roleError } = await supabaseAdmin
+      .rpc('has_role', { 
+        _user_id: requestingUser.id, 
+        _role: 'admin' 
+      });
 
-    if (profileError || profile?.role !== 'admin') {
+    if (roleError || !hasAdminRole) {
       console.error('Non-admin attempted password reset:', requestingUser.email);
       return new Response(
         JSON.stringify({ error: 'Unauthorized: Admin access required' }),

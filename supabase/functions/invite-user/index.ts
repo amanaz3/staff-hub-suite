@@ -95,6 +95,19 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Insert role into user_roles table
+    const { error: roleError } = await supabaseServiceRole
+      .from('user_roles')
+      .insert({ 
+        user_id: authData.user.id, 
+        role: role 
+      });
+
+    if (roleError) {
+      console.error("Error inserting user role:", roleError);
+      // Continue anyway as the role is also in user_metadata
+    }
+
     // Send password reset email so user can set their own password
     const { error: resetError } = await supabaseServiceRole.auth.admin.generateLink({
       type: 'recovery',

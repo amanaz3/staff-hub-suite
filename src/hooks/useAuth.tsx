@@ -13,6 +13,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  hasRole: (role: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -21,6 +22,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<any | null>(null);
+  const [userRoles, setUserRoles] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
@@ -119,19 +121,41 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const fetchProfile = async (userId: string) => {
     try {
       console.log('Fetching profile for user:', userId);
-      const { data, error } = await supabase
+      
+      // Fetch profile
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', userId)
         .maybeSingle();
 
-      if (error) {
-        console.error('Error fetching profile:', error);
+      if (profileError) {
+        console.error('Error fetching profile:', profileError);
         return;
       }
 
-      console.log('Profile fetched:', data);
-      setProfile(data);
+      // Fetch user roles from user_roles table
+      const { data: rolesData, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId);
+
+      if (rolesError) {
+        console.error('Error fetching roles:', rolesError);
+      }
+
+      const roles = rolesData?.map(r => r.role) || [];
+      setUserRoles(roles);
+      
+      // Add role to profile for backward compatibility
+      const enrichedProfile = {
+        ...profileData,
+        role: roles.includes('admin') ? 'admin' : 'staff'
+      };
+
+      console.log('Profile fetched:', enrichedProfile);
+      console.log('User roles:', roles);
+      setProfile(enrichedProfile);
     } catch (error) {
       console.error('Error fetching profile:', error);
     }
@@ -249,6 +273,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const hasRole = (role: string): boolean => {
+    return userRoles.includes(role);
+  };
+
   const value = {
     user,
     session,
@@ -258,6 +286,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     signIn,
     signOut,
     refreshProfile,
+    hasRole,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
