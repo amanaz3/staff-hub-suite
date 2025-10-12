@@ -13,7 +13,43 @@ export const TestEmailManagement = () => {
   const [message, setMessage] = useState('This is a test email to verify the email system is working correctly. If you received this, the email notifications are functioning properly!');
   const [loading, setLoading] = useState(false);
   const [notificationLoading, setNotificationLoading] = useState(false);
+  const [quickTestLoading, setQuickTestLoading] = useState(false);
   const { toast } = useToast();
+
+  const sendQuickTest = async () => {
+    setQuickTestLoading(true);
+    try {
+      const { error } = await supabase.functions.invoke('notify-email', {
+        body: {
+          type: 'test_email',
+          action: 'sent',
+          recipientEmail: 'support10@amanafinanz.com',
+          recipientName: 'New User',
+          submitterName: 'System Admin',
+          details: {
+            subject: 'HRFlow Email System Verification',
+            message: 'This is a test email to verify that the HRFlow email notification system is working correctly for your account. If you receive this, email notifications are functioning properly.'
+          }
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Test email sent!",
+        description: "Email sent to support10@amanafinanz.com. Check inbox and email_logs table.",
+      });
+    } catch (error: any) {
+      console.error('Error sending quick test:', error);
+      toast({
+        title: "Error sending test email",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setQuickTestLoading(false);
+    }
+  };
 
   const sendTestNotifications = async () => {
     setNotificationLoading(true);
@@ -121,6 +157,36 @@ export const TestEmailManagement = () => {
           <p className="text-muted-foreground">Send test emails to all active employees</p>
         </div>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Quick Test - support10@amanafinanz.com</CardTitle>
+          <CardDescription>
+            Send a test email immediately to verify the email system is working
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button 
+            onClick={sendQuickTest}
+            disabled={quickTestLoading}
+            className="w-full"
+            size="lg"
+            variant="default"
+          >
+            {quickTestLoading ? (
+              <>
+                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+                Sending Test Email...
+              </>
+            ) : (
+              <>
+                <Send className="h-4 w-4 mr-2" />
+                Send Test to support10@amanafinanz.com Now
+              </>
+            )}
+          </Button>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
