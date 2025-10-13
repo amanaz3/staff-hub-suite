@@ -91,7 +91,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Send email via Resend
     const emailResponse = await resend.emails.send({
-      from: "HRFlow <noreply@hr.amanacorporate.com>",
+      from: "HRFlow <noreply@amanacorporate.com>",
       to: [email],
       subject: "Password Reset Request - HRFlow",
       html: `
