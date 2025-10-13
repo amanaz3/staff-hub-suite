@@ -27,6 +27,7 @@ interface Employee {
   status: string;
   hire_date?: string;
   wfh_enabled?: boolean;
+  user_id?: string;
 }
 
 export const UserManagement = () => {
@@ -354,13 +355,26 @@ export const UserManagement = () => {
     try {
       const newStatus = statusToggleEmployee.status === 'active' ? 'inactive' : 'active';
       
+      // Fetch the user's current role from the profiles table to preserve it
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('user_id', statusToggleEmployee.user_id)
+        .single();
+
+      if (profileError) {
+        throw new Error('Failed to fetch user role: ' + profileError.message);
+      }
+
+      const currentRole = profileData?.role || 'staff';
+      
       const { error } = await supabase.functions.invoke('update-user', {
         body: {
           employee_id: statusToggleEmployee.id,
           full_name: statusToggleEmployee.full_name,
           email: statusToggleEmployee.email,
           staff_id: statusToggleEmployee.staff_id,
-          role: 'staff',
+          role: currentRole, // Use actual role instead of hardcoded 'staff'
           division: statusToggleEmployee.division || '',
           department: statusToggleEmployee.department,
           position: statusToggleEmployee.position,

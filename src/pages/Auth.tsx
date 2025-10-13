@@ -7,9 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { Users, Lock, Mail, User } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { Users, Lock, Mail, User, KeyRound } from "lucide-react";
 
 export const Auth = () => {
   const { user, profile, signIn, signUp, loading } = useAuth();
@@ -27,6 +29,9 @@ export const Auth = () => {
     department: "",
     position: ""
   });
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [sendingResetLink, setSendingResetLink] = useState(false);
 
 
   // Show loading while auth is initializing
@@ -86,6 +91,36 @@ export const Auth = () => {
       position: signUpData.position
     });
     setIsSubmitting(false);
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSendingResetLink(true);
+
+    try {
+      const { error } = await supabase.functions.invoke('forgot-password', {
+        body: { email: forgotPasswordEmail }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Reset link sent",
+        description: "If an account exists with this email, you will receive a password reset link shortly.",
+      });
+
+      setShowForgotPassword(false);
+      setForgotPasswordEmail("");
+    } catch (error: any) {
+      console.error('Error sending reset link:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send reset link. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingResetLink(false);
+    }
   };
 
 
@@ -162,6 +197,60 @@ export const Auth = () => {
                     {isSubmitting ? "Signing in..." : "Sign In"}
                   </Button>
                 </form>
+
+                {/* Forgot Password Link */}
+                <div className="text-center">
+                  <Dialog open={showForgotPassword} onOpenChange={setShowForgotPassword}>
+                    <DialogTrigger asChild>
+                      <Button variant="link" className="text-sm text-muted-foreground hover:text-primary">
+                        <KeyRound className="h-3 w-3 mr-1" />
+                        Forgot Password?
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>Reset Password</DialogTitle>
+                        <DialogDescription>
+                          Enter your email address and we'll send you a link to reset your password.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <form onSubmit={handleForgotPassword} className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="forgot-email">Email Address</Label>
+                          <div className="relative">
+                            <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              id="forgot-email"
+                              type="email"
+                              placeholder="Enter your email"
+                              value={forgotPasswordEmail}
+                              onChange={(e) => setForgotPasswordEmail(e.target.value)}
+                              className="pl-10"
+                              required
+                            />
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="flex-1"
+                            onClick={() => setShowForgotPassword(false)}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            type="submit"
+                            className="flex-1"
+                            disabled={sendingResetLink || !forgotPasswordEmail}
+                          >
+                            {sendingResetLink ? "Sending..." : "Send Reset Link"}
+                          </Button>
+                        </div>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
+                </div>
 
               </CardContent>
             </TabsContent>
