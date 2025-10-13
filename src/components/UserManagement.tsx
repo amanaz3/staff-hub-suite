@@ -49,6 +49,16 @@ export const UserManagement = () => {
   // Check if user is admin
   const isAdmin = profile?.role === 'admin';
   
+  // Debug logging
+  useEffect(() => {
+    console.log('🔍 UserManagement Debug:', {
+      isAdmin,
+      profileRole: profile?.role,
+      employeesCount: employees.length,
+      loading
+    });
+  }, [isAdmin, profile, employees, loading]);
+  
   // Form state
   const [formData, setFormData] = useState({
     email: '',
@@ -562,7 +572,8 @@ export const UserManagement = () => {
           {loading ? (
             <p>Loading employees...</p>
           ) : (
-            <Table>
+            <div className="overflow-x-auto -mx-6 px-6">
+              <Table>
               <TableHeader>
                   <TableRow>
                     <TableHead>Employee ID</TableHead>
@@ -574,7 +585,7 @@ export const UserManagement = () => {
                     <TableHead>Designation</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Hire Date</TableHead>
-                    {isAdmin && <TableHead>Actions</TableHead>}
+                    {isAdmin && <TableHead className="text-right min-w-[180px]">Actions</TableHead>}
                   </TableRow>
               </TableHeader>
               <TableBody>
@@ -594,19 +605,19 @@ export const UserManagement = () => {
                     </TableCell>
                     <TableCell>{employee.hire_date ? new Date(employee.hire_date).toLocaleDateString() : 'N/A'}</TableCell>
                     {isAdmin && (
-                      <TableCell>
+                      <TableCell className="min-w-[180px]">
                         <TooltipProvider>
-                          <div className="flex gap-1 justify-end">
+                          <div className="flex gap-2 justify-end items-center">
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Button
                                   variant="outline"
                                   size="sm"
                                   onClick={() => handleEditEmployee(employee)}
-                                  className="gap-2"
+                                  className="gap-2 bg-background hover:bg-accent"
                                 >
                                   <Pencil className="h-4 w-4" />
-                                  <span className="hidden md:inline">Edit</span>
+                                  <span className="hidden sm:inline">Edit</span>
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>
@@ -618,7 +629,11 @@ export const UserManagement = () => {
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <DropdownMenuTrigger asChild>
-                                    <Button variant="outline" size="sm">
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm"
+                                      className="bg-background hover:bg-accent"
+                                    >
                                       <MoreVertical className="h-4 w-4" />
                                     </Button>
                                   </DropdownMenuTrigger>
@@ -627,11 +642,14 @@ export const UserManagement = () => {
                                   <p>More actions</p>
                                 </TooltipContent>
                               </Tooltip>
-                              <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuContent 
+                                align="end" 
+                                className="w-48 bg-popover border shadow-md z-50"
+                              >
                                 <DropdownMenuItem
                                   onClick={() => handleResetPassword(employee)}
                                   disabled={resettingPassword === employee.id || !employee.email}
-                                  className="gap-2 cursor-pointer"
+                                  className="gap-2 cursor-pointer focus:bg-accent"
                                 >
                                   {resettingPassword === employee.id ? (
                                     <>
@@ -647,17 +665,17 @@ export const UserManagement = () => {
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={() => setStatusToggleEmployee(employee)}
-                                  className="gap-2 cursor-pointer"
+                                  className="gap-2 cursor-pointer focus:bg-accent"
                                 >
                                   {employee.status === 'active' ? (
                                     <>
-                                      <UserX className="h-4 w-4" />
-                                      Deactivate User
+                                      <UserX className="h-4 w-4 text-destructive" />
+                                      <span>Deactivate User</span>
                                     </>
                                   ) : (
                                     <>
-                                      <UserCheck className="h-4 w-4" />
-                                      Activate User
+                                      <UserCheck className="h-4 w-4 text-green-600" />
+                                      <span>Activate User</span>
                                     </>
                                   )}
                                 </DropdownMenuItem>
@@ -671,6 +689,7 @@ export const UserManagement = () => {
                 ))}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>
