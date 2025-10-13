@@ -15,51 +15,21 @@ export default function ResetPassword() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [hasToken, setHasToken] = useState(false);
-  const [resetToken, setResetToken] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    const validateToken = async (token: string) => {
-      const { data, error } = await supabase
-        .from('password_reset_tokens')
-        .select('user_id, expires_at, used_at')
-        .eq('token', token)
-        .maybeSingle();
-      
-      if (error || !data || data.used_at) {
-        toast({
-          title: "Invalid reset link",
-          description: "This link is invalid or has already been used.",
-          variant: "destructive",
-        });
-        setTimeout(() => navigate('/auth'), 2000);
-        return;
-      }
-      
-      if (new Date(data.expires_at) < new Date()) {
-        toast({
-          title: "Expired reset link",
-          description: "This link has expired. Please request a new one.",
-          variant: "destructive",
-        });
-        setTimeout(() => navigate('/auth'), 2000);
-        return;
-      }
-      
-      setHasToken(true);
-    };
-
-    const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get('token');
+    // Check if we have a recovery token in the URL hash
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const accessToken = hashParams.get('access_token');
+    const type = hashParams.get('type');
     
-    if (token) {
-      setResetToken(token);
-      validateToken(token);
+    if (accessToken && type === 'recovery') {
+      setHasToken(true);
     } else {
       toast({
         title: "Invalid reset link",
-        description: "No reset token found in the URL.",
+        description: "This password reset link is invalid or has expired.",
         variant: "destructive",
       });
       setTimeout(() => navigate('/auth'), 2000);
@@ -91,23 +61,19 @@ export default function ResetPassword() {
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validatePassword() || !resetToken) return;
+    if (!validatePassword()) return;
 
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('update-user-password', {
-        body: { 
-          token: resetToken,
-          new_password: newPassword 
-        }
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
       });
 
       if (error) throw error;
 
-      if (data?.error) {
-        throw new Error(data.error);
-      }
+      // Sign out the recovery session to prevent auto-login
+      await supabase.auth.signOut();
 
       toast({
         title: "Password updated successfully",
@@ -124,7 +90,7 @@ export default function ResetPassword() {
       console.error('Error resetting password:', error);
       toast({
         title: "Error updating password",
-        description: error.message || "Failed to update password. Please try again.",
+        description: error.message || "The reset link may have expired. Please request a new one.",
         variant: "destructive",
       });
     } finally {

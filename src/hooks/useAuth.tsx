@@ -35,7 +35,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       async (event, session) => {
         if (!mounted) return;
         
-        console.log('Auth state change:', event, session?.user?.email);
+        // Check if we're in password recovery mode
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const isRecoveryMode = hashParams.get('type') === 'recovery';
+        
+        console.log('Auth state change:', event, session?.user?.email, 'Recovery mode:', isRecoveryMode);
+        
+        // If in recovery mode and not on reset password page, redirect there
+        if (isRecoveryMode && window.location.pathname !== '/reset-password') {
+          window.location.href = `/reset-password${window.location.hash}`;
+          return;
+        }
+        
+        // If in recovery mode on reset password page, don't set session yet
+        if (isRecoveryMode && window.location.pathname === '/reset-password') {
+          setLoading(false);
+          return;
+        }
         
         setSession(session);
         setUser(session?.user ?? null);

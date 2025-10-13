@@ -83,26 +83,19 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Generate a secure random token
-    const resetToken = crypto.randomUUID();
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
-
-    // Store token in database
-    const { error: tokenError } = await supabaseAdmin
-      .from('password_reset_tokens')
-      .insert({
-        user_id: user.id,
-        token: resetToken,
-        expires_at: expiresAt.toISOString()
+    const { data: resetData, error: resetError } = await supabaseAdmin.auth.admin
+      .generateLink({
+        type: 'recovery',
+        email: user_email,
+        options: {
+          redirectTo: `${new URL(req.url).origin}/reset-password`,
+        }
       });
 
-    if (tokenError) {
-      console.error('Error storing reset token:', tokenError);
-      throw tokenError;
+    if (resetError) {
+      console.error('Error generating reset link:', resetError);
+      throw resetError;
     }
-
-    // Create reset URL with custom token
-    const resetUrl = `${new URL(req.url).origin}/reset-password?token=${resetToken}`;
 
     const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
     
@@ -131,10 +124,10 @@ const handler = async (req: Request): Promise<Response> => {
               <p>Hello ${user_name || 'User'},</p>
               <p>Your system administrator has initiated a password reset for your account.</p>
               <p>Click the button below to create a new password:</p>
-              <a href="${resetUrl}" class="button">Create New Password</a>
+              <a href="${resetData.properties.action_link}" class="button">Create New Password</a>
               <p>Or copy and paste this link into your browser:</p>
               <p style="word-break: break-all; background: white; padding: 10px; border-radius: 4px;">
-                ${resetUrl}
+                ${resetData.properties.action_link}
               </p>
               <div class="warning">
                 <strong>⚠️ Security Notice:</strong> This link will expire in 1 hour. 
