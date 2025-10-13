@@ -9,7 +9,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { UserPlus, Users, KeyRound, Loader2, Pencil } from 'lucide-react';
+import { UserPlus, Users, KeyRound, Loader2, Pencil, MoreVertical, UserX, UserCheck } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 interface Employee {
   id: string;
@@ -40,6 +43,8 @@ export const UserManagement = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [editStaffIdError, setEditStaffIdError] = useState('');
+  const [statusToggleEmployee, setStatusToggleEmployee] = useState<Employee | null>(null);
+  const [togglingStatus, setTogglingStatus] = useState(false);
   
   // Check if user is admin
   const isAdmin = profile?.role === 'admin';
@@ -348,6 +353,49 @@ export const UserManagement = () => {
     }
   };
 
+  const handleToggleStatus = async () => {
+    if (!statusToggleEmployee) return;
+
+    setTogglingStatus(true);
+
+    try {
+      const newStatus = statusToggleEmployee.status === 'active' ? 'inactive' : 'active';
+      
+      const { error } = await supabase.functions.invoke('update-user', {
+        body: {
+          employee_id: statusToggleEmployee.id,
+          full_name: statusToggleEmployee.full_name,
+          email: statusToggleEmployee.email,
+          staff_id: statusToggleEmployee.staff_id,
+          role: 'staff',
+          division: statusToggleEmployee.division || '',
+          department: statusToggleEmployee.department,
+          position: statusToggleEmployee.position,
+          status: newStatus
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: `User ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully`,
+      });
+
+      setStatusToggleEmployee(null);
+      fetchEmployees();
+    } catch (error: any) {
+      console.error('Error toggling status:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update user status',
+        variant: 'destructive',
+      });
+    } finally {
+      setTogglingStatus(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -547,36 +595,76 @@ export const UserManagement = () => {
                     <TableCell>{employee.hire_date ? new Date(employee.hire_date).toLocaleDateString() : 'N/A'}</TableCell>
                     {isAdmin && (
                       <TableCell>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEditEmployee(employee)}
-                            className="gap-2"
-                          >
-                            <Pencil className="h-4 w-4" />
-                            Edit
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleResetPassword(employee)}
-                            disabled={resettingPassword === employee.id || !employee.email}
-                            className="gap-2"
-                          >
-                            {resettingPassword === employee.id ? (
-                              <>
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                                Sending...
-                              </>
-                            ) : (
-                              <>
-                                <KeyRound className="h-4 w-4" />
-                                Reset Password
-                              </>
-                            )}
-                          </Button>
-                        </div>
+                        <TooltipProvider>
+                          <div className="flex gap-1 justify-end">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleEditEmployee(employee)}
+                                  className="gap-2"
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                  <span className="hidden md:inline">Edit</span>
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Edit user details</p>
+                              </TooltipContent>
+                            </Tooltip>
+
+                            <DropdownMenu>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="outline" size="sm">
+                                      <MoreVertical className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>More actions</p>
+                                </TooltipContent>
+                              </Tooltip>
+                              <DropdownMenuContent align="end" className="w-48">
+                                <DropdownMenuItem
+                                  onClick={() => handleResetPassword(employee)}
+                                  disabled={resettingPassword === employee.id || !employee.email}
+                                  className="gap-2 cursor-pointer"
+                                >
+                                  {resettingPassword === employee.id ? (
+                                    <>
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                      Sending...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <KeyRound className="h-4 w-4" />
+                                      Reset Password
+                                    </>
+                                  )}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => setStatusToggleEmployee(employee)}
+                                  className="gap-2 cursor-pointer"
+                                >
+                                  {employee.status === 'active' ? (
+                                    <>
+                                      <UserX className="h-4 w-4" />
+                                      Deactivate User
+                                    </>
+                                  ) : (
+                                    <>
+                                      <UserCheck className="h-4 w-4" />
+                                      Activate User
+                                    </>
+                                  )}
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </TooltipProvider>
                       </TableCell>
                     )}
                   </TableRow>
@@ -725,6 +813,29 @@ export const UserManagement = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Status Toggle Confirmation Dialog */}
+      <AlertDialog open={!!statusToggleEmployee} onOpenChange={() => setStatusToggleEmployee(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {statusToggleEmployee?.status === 'active' ? 'Deactivate User' : 'Activate User'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {statusToggleEmployee?.status === 'active' 
+                ? `Are you sure you want to deactivate ${statusToggleEmployee?.full_name}? They will no longer be able to access the system.`
+                : `Are you sure you want to activate ${statusToggleEmployee?.full_name}? They will regain access to the system.`
+              }
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={togglingStatus}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleToggleStatus} disabled={togglingStatus}>
+              {togglingStatus ? 'Processing...' : 'Confirm'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
