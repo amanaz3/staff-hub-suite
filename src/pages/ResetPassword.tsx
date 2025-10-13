@@ -72,12 +72,9 @@ export default function ResetPassword() {
 
       if (error) throw error;
 
-      // Sign out the recovery session to prevent auto-login
-      await supabase.auth.signOut();
-
       toast({
         title: "Password updated successfully",
-        description: "Please log in with your new password.",
+        description: "You can now log in with your new password.",
       });
 
       // Clear form
