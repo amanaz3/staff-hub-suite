@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,12 +30,12 @@ interface Employee {
 }
 
 export const UserManagement = () => {
+  const { profile, hasRole } = useAuth();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [inviting, setInviting] = useState(false);
   const [resettingPassword, setResettingPassword] = useState<string | null>(null);
   const { toast } = useToast();
-  const [profile, setProfile] = useState<any>(null);
   const [divisions, setDivisions] = useState<string[]>([]);
   const [isAddingNewDivision, setIsAddingNewDivision] = useState(false);
   const [newDivisionName, setNewDivisionName] = useState('');
@@ -46,8 +47,8 @@ export const UserManagement = () => {
   const [statusToggleEmployee, setStatusToggleEmployee] = useState<Employee | null>(null);
   const [togglingStatus, setTogglingStatus] = useState(false);
   
-  // Check if user is admin
-  const isAdmin = profile?.role === 'admin';
+  // Check if user is admin using the proper role check
+  const isAdmin = hasRole('admin');
   
   // Debug logging
   useEffect(() => {
@@ -69,22 +70,6 @@ export const UserManagement = () => {
     department: '',
     position: ''
   });
-
-  // Fetch user profile on mount
-  useEffect(() => {
-    const getCurrentUserProfile = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('user_id', user.id)
-          .single();
-        setProfile(profileData);
-      }
-    };
-    getCurrentUserProfile();
-  }, []);
 
   // Fetch divisions for dropdown
   useEffect(() => {
@@ -142,11 +127,9 @@ export const UserManagement = () => {
   };
 
   useEffect(() => {
-    // Only fetch employees after profile is loaded
-    if (profile !== null) {
-      fetchEmployees();
-    }
-  }, [profile, isAdmin]);
+    // Fetch employees when admin status is determined
+    fetchEmployees();
+  }, [isAdmin]);
 
   const validateStaffId = (value: string) => {
     if (!/^\d{4}$/.test(value)) {
