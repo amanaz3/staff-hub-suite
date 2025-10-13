@@ -7,8 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { UserPlus, Users, KeyRound, Loader2 } from 'lucide-react';
+import { UserPlus, Users, KeyRound, Loader2, Pencil } from 'lucide-react';
 
 interface Employee {
   id: string;
@@ -35,6 +36,10 @@ export const UserManagement = () => {
   const [isAddingNewDivision, setIsAddingNewDivision] = useState(false);
   const [newDivisionName, setNewDivisionName] = useState('');
   const [staffIdError, setStaffIdError] = useState('');
+  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [updating, setUpdating] = useState(false);
+  const [editStaffIdError, setEditStaffIdError] = useState('');
   
   // Check if user is admin
   const isAdmin = profile?.role === 'admin';
@@ -267,6 +272,82 @@ export const UserManagement = () => {
     }
   };
 
+  const handleEditEmployee = async (employee: Employee) => {
+    // Fetch the user's role
+    const { data: employeeData } = await supabase
+      .from('employees')
+      .select('user_id')
+      .eq('id', employee.id)
+      .single();
+
+    if (employeeData?.user_id) {
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', employeeData.user_id)
+        .single();
+
+      setEditingEmployee({
+        ...employee,
+        role: roleData?.role || 'staff'
+      } as any);
+    } else {
+      setEditingEmployee(employee);
+    }
+    
+    setIsEditDialogOpen(true);
+    setEditStaffIdError('');
+  };
+
+  const handleUpdateEmployee = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingEmployee) return;
+
+    // Validate staff_id
+    if (!/^\d{4}$/.test(editingEmployee.staff_id || '')) {
+      setEditStaffIdError('Staff ID must be 4 digits (e.g., 0032)');
+      return;
+    }
+
+    setUpdating(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('update-user', {
+        body: {
+          employee_id: editingEmployee.id,
+          full_name: editingEmployee.full_name,
+          email: editingEmployee.email,
+          staff_id: editingEmployee.staff_id,
+          role: (editingEmployee as any).role || 'staff',
+          division: editingEmployee.division || '',
+          department: editingEmployee.department,
+          position: editingEmployee.position,
+          status: editingEmployee.status
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'User updated successfully',
+      });
+
+      setIsEditDialogOpen(false);
+      setEditingEmployee(null);
+      fetchEmployees();
+    } catch (error: any) {
+      console.error('Error updating user:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update user',
+        variant: 'destructive',
+      });
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -466,25 +547,36 @@ export const UserManagement = () => {
                     <TableCell>{employee.hire_date ? new Date(employee.hire_date).toLocaleDateString() : 'N/A'}</TableCell>
                     {isAdmin && (
                       <TableCell>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleResetPassword(employee)}
-                          disabled={resettingPassword === employee.id || !employee.email}
-                          className="gap-2"
-                        >
-                          {resettingPassword === employee.id ? (
-                            <>
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                              Sending...
-                            </>
-                          ) : (
-                            <>
-                              <KeyRound className="h-4 w-4" />
-                              Reset Password
-                            </>
-                          )}
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditEmployee(employee)}
+                            className="gap-2"
+                          >
+                            <Pencil className="h-4 w-4" />
+                            Edit
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleResetPassword(employee)}
+                            disabled={resettingPassword === employee.id || !employee.email}
+                            className="gap-2"
+                          >
+                            {resettingPassword === employee.id ? (
+                              <>
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                Sending...
+                              </>
+                            ) : (
+                              <>
+                                <KeyRound className="h-4 w-4" />
+                                Reset Password
+                              </>
+                            )}
+                          </Button>
+                        </div>
                       </TableCell>
                     )}
                   </TableRow>
@@ -494,6 +586,145 @@ export const UserManagement = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Edit User Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit User</DialogTitle>
+          </DialogHeader>
+          {editingEmployee && (
+            <form onSubmit={handleUpdateEmployee} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-email">Email *</Label>
+                  <Input
+                    id="edit-email"
+                    type="email"
+                    value={editingEmployee.email || ''}
+                    onChange={(e) => setEditingEmployee({ ...editingEmployee, email: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-full_name">Full Name *</Label>
+                  <Input
+                    id="edit-full_name"
+                    value={editingEmployee.full_name}
+                    onChange={(e) => setEditingEmployee({ ...editingEmployee, full_name: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-staff_id">Staff ID *</Label>
+                  <Input
+                    id="edit-staff_id"
+                    value={editingEmployee.staff_id || ''}
+                    onChange={(e) => {
+                      setEditingEmployee({ ...editingEmployee, staff_id: e.target.value });
+                      if (e.target.value && !/^\d{4}$/.test(e.target.value)) {
+                        setEditStaffIdError('Staff ID must be 4 digits');
+                      } else {
+                        setEditStaffIdError('');
+                      }
+                    }}
+                    placeholder="e.g., 0032"
+                    maxLength={4}
+                    required
+                    className="font-mono"
+                  />
+                  {editStaffIdError && (
+                    <p className="text-sm text-destructive">{editStaffIdError}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-role">Role *</Label>
+                  <Select 
+                    value={(editingEmployee as any).role || 'staff'} 
+                    onValueChange={(value) => setEditingEmployee({ ...editingEmployee, role: value } as any)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="staff">Staff</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-division">Division</Label>
+                  <Select 
+                    value={editingEmployee.division || ''} 
+                    onValueChange={(value) => setEditingEmployee({ ...editingEmployee, division: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select division" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {divisions.map((div) => (
+                        <SelectItem key={div} value={div}>
+                          {div}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-department">Department *</Label>
+                  <Input
+                    id="edit-department"
+                    value={editingEmployee.department}
+                    onChange={(e) => setEditingEmployee({ ...editingEmployee, department: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-position">Designation *</Label>
+                  <Input
+                    id="edit-position"
+                    value={editingEmployee.position}
+                    onChange={(e) => setEditingEmployee({ ...editingEmployee, position: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-status">Status *</Label>
+                  <Select 
+                    value={editingEmployee.status} 
+                    onValueChange={(value) => setEditingEmployee({ ...editingEmployee, status: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setIsEditDialogOpen(false);
+                    setEditingEmployee(null);
+                    setEditStaffIdError('');
+                  }}
+                  disabled={updating}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={updating}>
+                  {updating ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
