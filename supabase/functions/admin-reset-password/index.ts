@@ -88,7 +88,7 @@ const handler = async (req: Request): Promise<Response> => {
         type: 'recovery',
         email: user_email,
         options: {
-          redirectTo: `${new URL(req.url).origin}/auth`,
+          redirectTo: `${new URL(req.url).origin}/reset-password`,
         }
       });
 
@@ -123,8 +123,8 @@ const handler = async (req: Request): Promise<Response> => {
             <div class="content">
               <p>Hello ${user_name || 'User'},</p>
               <p>Your system administrator has initiated a password reset for your account.</p>
-              <p>Click the button below to set a new password:</p>
-              <a href="${resetData.properties.action_link}" class="button">Reset Password</a>
+              <p>Click the button below to create a new password:</p>
+              <a href="${resetData.properties.action_link}" class="button">Create New Password</a>
               <p>Or copy and paste this link into your browser:</p>
               <p style="word-break: break-all; background: white; padding: 10px; border-radius: 4px;">
                 ${resetData.properties.action_link}
