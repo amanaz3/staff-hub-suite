@@ -355,18 +355,26 @@ export const UserManagement = () => {
     try {
       const newStatus = statusToggleEmployee.status === 'active' ? 'inactive' : 'active';
       
-      // Fetch the user's current role from the profiles table to preserve it
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
+      // Fetch the user's current role from user_roles table to preserve it
+      const { data: roleData, error: roleError } = await supabase
+        .from('user_roles')
         .select('role')
         .eq('user_id', statusToggleEmployee.user_id)
-        .single();
+        .maybeSingle();
 
-      if (profileError) {
-        throw new Error('Failed to fetch user role: ' + profileError.message);
+      if (roleError) {
+        console.error('Error fetching user role:', roleError);
+        toast({
+          title: "Error",
+          description: "Failed to fetch user role. Please try again.",
+          variant: "destructive",
+        });
+        setTogglingStatus(false);
+        return;
       }
 
-      const currentRole = profileData?.role || 'staff';
+      // Default to 'staff' if no role found in user_roles table
+      const currentRole = roleData?.role || 'staff';
       
       const { error } = await supabase.functions.invoke('update-user', {
         body: {
