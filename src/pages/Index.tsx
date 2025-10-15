@@ -5,10 +5,11 @@ import { AdminDashboard } from "@/components/AdminDashboard";
 import { LeaveManagement } from "@/components/LeaveManagement";
 import { Navigation, Breadcrumb } from "@/components/ui/navigation";
 import { Button } from "@/components/ui/button";
-import { Users, Calendar, Settings, BarChart, Menu, X, RefreshCw, FileText } from "lucide-react";
+import { Users, Calendar, Settings, BarChart, Menu, X, RefreshCw, FileText, ClipboardList } from "lucide-react";
 import { AdminEmails } from "@/pages/AdminEmails";
 import { AdminUsers } from "@/pages/AdminUsers";
 import { DocumentManagement } from "@/components/DocumentManagement";
+import { AttendanceReport } from "@/components/AttendanceReport";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 
@@ -54,6 +55,7 @@ const Index = () => {
     { id: 'dashboard', label: 'Dashboard', icon: BarChart },
     { id: 'leaves', label: 'Leave Management', icon: Calendar },
     ...(profile?.role === 'admin' ? [
+      { id: 'attendance', label: 'Attendance Report', icon: ClipboardList },
       { id: 'documents', label: 'Staff Documents', icon: FileText },
       { id: 'users', label: 'User Management', icon: Users },
       { id: 'emails', label: 'Test Emails', icon: Settings }
@@ -206,6 +208,12 @@ const Index = () => {
           {activeTab === 'leaves' && (
             <div className="container mx-auto px-4 sm:px-6 py-8">
               <AdminDashboard userRole={profile.role} />
+            </div>
+          )}
+
+          {activeTab === 'attendance' && (
+            <div className="container mx-auto px-4 sm:px-6 py-8">
+              <AttendanceReport />
             </div>
           )}
 
