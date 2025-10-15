@@ -581,7 +581,6 @@ export const UserManagement = () => {
               <Table>
               <TableHeader>
                   <TableRow>
-                    <TableHead>Employee ID</TableHead>
                     <TableHead>Staff ID</TableHead>
                     <TableHead>Name</TableHead>
                     {isAdmin && <TableHead>Email</TableHead>}
@@ -596,7 +595,6 @@ export const UserManagement = () => {
               <TableBody>
                 {employees.map((employee) => (
                   <TableRow key={employee.id}>
-                    <TableCell className="font-medium">{employee.employee_id}</TableCell>
                     <TableCell className="font-mono">{employee.staff_id || 'N/A'}</TableCell>
                     <TableCell>{employee.full_name}</TableCell>
                     {isAdmin && <TableCell>{employee.email || 'N/A'}</TableCell>}
