@@ -8,11 +8,14 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { StatusBadge } from '@/components/ui/status-badge';
-import { Download, Search } from 'lucide-react';
+import { Download, Search, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, getDay } from 'date-fns';
 import { toast } from 'sonner';
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+type SortField = 'employeeId' | 'employeeName' | 'date' | 'clockIn' | 'clockOut' | 'lateHours' | 'earlyHours' | 'pendingLeaves' | 'remark';
+type SortDirection = 'asc' | 'desc' | null;
 
 export const AttendanceReport = () => {
   const currentDate = new Date();
@@ -21,6 +24,8 @@ export const AttendanceReport = () => {
   const [showLateOnly, setShowLateOnly] = useState(false);
   const [showEarlyOnly, setShowEarlyOnly] = useState(false);
   const [showAbsentOnly, setShowAbsentOnly] = useState(false);
+  const [sortField, setSortField] = useState<SortField>('date');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
   // Generate last 12 months for dropdown
   const monthOptions = useMemo(() => {
@@ -162,7 +167,7 @@ export const AttendanceReport = () => {
   const filteredData = useMemo(() => {
     if (!attendanceData) return [];
 
-    return attendanceData.filter(record => {
+    let filtered = attendanceData.filter(record => {
       // Search filter
       const matchesSearch = !searchTerm || 
         record.employeeId.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -175,7 +180,58 @@ export const AttendanceReport = () => {
 
       return matchesSearch && matchesLate && matchesEarly && matchesAbsent;
     });
-  }, [attendanceData, searchTerm, showLateOnly, showEarlyOnly, showAbsentOnly]);
+
+    // Apply sorting
+    if (sortField && sortDirection) {
+      filtered = [...filtered].sort((a, b) => {
+        let aValue = a[sortField];
+        let bValue = b[sortField];
+
+        // Convert to numbers for numeric fields
+        if (sortField === 'lateHours' || sortField === 'earlyHours' || sortField === 'pendingLeaves') {
+          aValue = parseFloat(aValue as string) || 0;
+          bValue = parseFloat(bValue as string) || 0;
+        }
+
+        // Compare values
+        if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+        if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return filtered;
+  }, [attendanceData, searchTerm, showLateOnly, showEarlyOnly, showAbsentOnly, sortField, sortDirection]);
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      // Cycle through: asc -> desc -> null
+      if (sortDirection === 'asc') {
+        setSortDirection('desc');
+      } else if (sortDirection === 'desc') {
+        setSortDirection(null);
+        setSortField('date');
+      } else {
+        setSortDirection('asc');
+      }
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const SortIcon = ({ field }: { field: SortField }) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="h-4 w-4 ml-1 opacity-40" />;
+    }
+    if (sortDirection === 'asc') {
+      return <ArrowUp className="h-4 w-4 ml-1" />;
+    }
+    if (sortDirection === 'desc') {
+      return <ArrowDown className="h-4 w-4 ml-1" />;
+    }
+    return <ArrowUpDown className="h-4 w-4 ml-1 opacity-40" />;
+  };
 
   const handleExport = () => {
     if (!filteredData.length) {
@@ -312,16 +368,88 @@ export const AttendanceReport = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Staff ID</TableHead>
-                <TableHead>Staff Name</TableHead>
-                <TableHead>Date</TableHead>
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-muted/50"
+                  onClick={() => handleSort('employeeId')}
+                >
+                  <div className="flex items-center">
+                    Staff ID
+                    <SortIcon field="employeeId" />
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-muted/50"
+                  onClick={() => handleSort('employeeName')}
+                >
+                  <div className="flex items-center">
+                    Staff Name
+                    <SortIcon field="employeeName" />
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-muted/50"
+                  onClick={() => handleSort('date')}
+                >
+                  <div className="flex items-center">
+                    Date
+                    <SortIcon field="date" />
+                  </div>
+                </TableHead>
                 <TableHead>Day</TableHead>
-                <TableHead>Clock In</TableHead>
-                <TableHead>Clock Out</TableHead>
-                <TableHead>Late Hours</TableHead>
-                <TableHead>Early Hours</TableHead>
-                <TableHead>Leave Pending</TableHead>
-                <TableHead>Remark</TableHead>
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-muted/50"
+                  onClick={() => handleSort('clockIn')}
+                >
+                  <div className="flex items-center">
+                    Clock In
+                    <SortIcon field="clockIn" />
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-muted/50"
+                  onClick={() => handleSort('clockOut')}
+                >
+                  <div className="flex items-center">
+                    Clock Out
+                    <SortIcon field="clockOut" />
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-muted/50"
+                  onClick={() => handleSort('lateHours')}
+                >
+                  <div className="flex items-center">
+                    Late Hours
+                    <SortIcon field="lateHours" />
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-muted/50"
+                  onClick={() => handleSort('earlyHours')}
+                >
+                  <div className="flex items-center">
+                    Early Hours
+                    <SortIcon field="earlyHours" />
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-muted/50"
+                  onClick={() => handleSort('pendingLeaves')}
+                >
+                  <div className="flex items-center">
+                    Leave Pending
+                    <SortIcon field="pendingLeaves" />
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-muted/50"
+                  onClick={() => handleSort('remark')}
+                >
+                  <div className="flex items-center">
+                    Remark
+                    <SortIcon field="remark" />
+                  </div>
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
