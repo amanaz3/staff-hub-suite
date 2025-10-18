@@ -38,11 +38,14 @@ interface DashboardProps {
 }
 
 interface TodayAttendance {
+  employee_id: string;
   employee_name: string;
   department: string;
   clock_in_time: string | null;
   clock_out_time: string | null;
   status: string;
+  start_time?: string;
+  working_days?: string[];
 }
 
 interface DashboardStats {
@@ -67,6 +70,34 @@ export const Dashboard = ({ userRole, currentUser, userProfile, onLogout, onNavi
   // Get today's date in YYYY-MM-DD format
   const today = new Date().toISOString().split('T')[0];
 
+  // Helper function to check if clock-in is late based on work schedule
+  const isLateCheckIn = (clockInTime: string, startTime: string | undefined): boolean => {
+    if (!clockInTime) return false;
+    
+    const clockIn = new Date(clockInTime);
+    const gracePeriodMinutes = 15;
+    
+    // Default to 9:00 AM if no schedule
+    const defaultStartHour = 9;
+    const defaultStartMinute = 0;
+    
+    let scheduleStartHour = defaultStartHour;
+    let scheduleStartMinute = defaultStartMinute;
+    
+    if (startTime) {
+      // Parse time format "HH:MM:SS"
+      const [hours, minutes] = startTime.split(':').map(Number);
+      scheduleStartHour = hours;
+      scheduleStartMinute = minutes;
+    }
+    
+    // Create a date object for scheduled start time on the same day
+    const scheduledStart = new Date(clockIn);
+    scheduledStart.setHours(scheduleStartHour, scheduleStartMinute + gracePeriodMinutes, 0, 0);
+    
+    return clockIn > scheduledStart;
+  };
+
   // Fetch dashboard data
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -75,6 +106,7 @@ export const Dashboard = ({ userRole, currentUser, userProfile, onLogout, onNavi
         const { data: attendanceData, error: attendanceError } = await supabase
           .from('attendance')
           .select(`
+            employee_id,
             clock_in_time,
             clock_out_time,
             status,
@@ -86,16 +118,38 @@ export const Dashboard = ({ userRole, currentUser, userProfile, onLogout, onNavi
           .eq('date', today)
           .order('clock_in_time', { ascending: true });
 
+        let formattedData: TodayAttendance[] = [];
+
         if (attendanceError) {
           console.error('Error fetching today\'s attendance:', attendanceError);
         } else {
-          const formattedData: TodayAttendance[] = (attendanceData || []).map(record => ({
-            employee_name: record.employees.full_name,
-            department: record.employees.department,
-            clock_in_time: record.clock_in_time,
-            clock_out_time: record.clock_out_time,
-            status: record.status
-          }));
+          // Fetch work schedules for employees
+          const employeeIds = (attendanceData || []).map(record => record.employee_id);
+          const { data: scheduleData } = await supabase
+            .from('work_schedules')
+            .select('employee_id, start_time, working_days')
+            .in('employee_id', employeeIds)
+            .eq('is_active', true);
+
+          // Create a map of schedules by employee_id
+          const scheduleMap = new Map(
+            (scheduleData || []).map(s => [s.employee_id, s])
+          );
+
+          // Merge schedule data with attendance data
+          formattedData = (attendanceData || []).map(record => {
+            const schedule = scheduleMap.get(record.employee_id);
+            return {
+              employee_id: record.employee_id,
+              employee_name: record.employees.full_name,
+              department: record.employees.department,
+              clock_in_time: record.clock_in_time,
+              clock_out_time: record.clock_out_time,
+              status: record.status,
+              start_time: schedule?.start_time,
+              working_days: schedule?.working_days
+            };
+          });
 
           setTodayAttendance(formattedData);
         }
@@ -128,14 +182,10 @@ export const Dashboard = ({ userRole, currentUser, userProfile, onLogout, onNavi
             .lte('start_date', today)
             .gte('end_date', today);
 
-          // Calculate late check-ins
-          const lateCheckIns = (attendanceData || []).filter(record => {
+          // Calculate late check-ins using work schedules
+          const lateCheckIns = formattedData.filter(record => {
             if (!record.clock_in_time) return false;
-            const clockInTime = new Date(record.clock_in_time);
-            const clockInHour = clockInTime.getHours();
-            const clockInMinute = clockInTime.getMinutes();
-            // Consider late if clocked in after 9:00 AM
-            return clockInHour > 9 || (clockInHour === 9 && clockInMinute > 0);
+            return isLateCheckIn(record.clock_in_time, record.start_time);
           }).length;
 
           setDashboardStats({
@@ -159,12 +209,7 @@ export const Dashboard = ({ userRole, currentUser, userProfile, onLogout, onNavi
   const getAttendanceStatus = (record: TodayAttendance) => {
     if (!record.clock_in_time) return 'absent';
     
-    const clockInTime = new Date(record.clock_in_time);
-    const clockInHour = clockInTime.getHours();
-    const clockInMinute = clockInTime.getMinutes();
-    
-    // Consider late if clocked in after 9:00 AM
-    if (clockInHour > 9 || (clockInHour === 9 && clockInMinute > 0)) {
+    if (isLateCheckIn(record.clock_in_time, record.start_time)) {
       return 'late';
     }
     
