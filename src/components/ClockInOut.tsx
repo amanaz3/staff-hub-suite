@@ -202,7 +202,8 @@ export const ClockInOut = ({ userProfile }: ClockInOutProps) => {
       return;
     }
     
-    if (state.status !== 'clocked-in') return;
+    // Allow re-clocking out if already clocked in or clocked out
+    if (state.status === 'not-clocked-in') return;
     
     setActionLoading(true);
     try {
@@ -347,15 +348,15 @@ export const ClockInOut = ({ userProfile }: ClockInOutProps) => {
             <Button 
               onClick={handleClockOut}
               size="lg"
-              disabled={actionLoading || state.status !== 'clocked-in'}
+              disabled={actionLoading || state.status === 'not-clocked-in'}
               className="bg-status-rejected hover:bg-status-rejected/90 disabled:opacity-50"
             >
-              {actionLoading && state.status === 'clocked-in' ? (
+              {actionLoading && state.status !== 'not-clocked-in' ? (
                 <Loader2 className="h-5 w-5 mr-2 animate-spin" />
               ) : (
                 <LogOut className="h-5 w-5 mr-2" />
               )}
-              Clock Out
+              {state.status === 'clocked-out' ? 'Update Clock Out' : 'Clock Out'}
             </Button>
           </div>
         </div>
