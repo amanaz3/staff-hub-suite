@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Calendar, Plus, Edit } from 'lucide-react';
+import { Calendar, Plus, Edit, RefreshCw, AlertCircle } from 'lucide-react';
 
 interface LeaveBalance {
   id: string;
@@ -15,6 +15,8 @@ interface LeaveBalance {
   allocated_days: number;
   used_days: number;
   year: number;
+  auto_calculated?: boolean;
+  service_months_at_allocation?: number;
   employee_name?: string;
   leave_type_name?: string;
 }
@@ -41,6 +43,7 @@ export const LeaveBalanceManagement = () => {
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [editingBalance, setEditingBalance] = useState<LeaveBalance | null>(null);
   const [loading, setLoading] = useState(false);
+  const [autoAllocating, setAutoAllocating] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -208,6 +211,32 @@ export const LeaveBalanceManagement = () => {
     setAllocatedDays(balance.allocated_days);
   };
 
+  const handleAutoAllocate = async () => {
+    setAutoAllocating(true);
+    try {
+      const { data, error } = await supabase.rpc('auto_allocate_leave_balances', {
+        p_year: selectedYear
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: `Leave balances auto-calculated for ${selectedYear} based on UAE Labour Law`
+      });
+
+      fetchBalances();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setAutoAllocating(false);
+    }
+  };
+
   const getAvailableEmployeeLeaveTypes = () => {
     if (!selectedEmployeeId) return [];
     
@@ -224,6 +253,62 @@ export const LeaveBalanceManagement = () => {
 
   return (
     <div className="space-y-6">
+      {/* Auto-Allocate Card */}
+      <Card className="bg-primary/5 border-primary/20">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <RefreshCw className="h-5 w-5 text-primary" />
+            Auto-Calculate Leave Balances (UAE Labour Law)
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-primary mt-0.5" />
+            <div className="flex-1 space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Automatically calculate leave entitlements for all active employees based on:
+              </p>
+              <ul className="text-xs text-muted-foreground space-y-1 ml-4">
+                <li>• Annual Leave: 2 days/month (6-12 months service) or 30 days (&gt;1 year)</li>
+                <li>• Sick Leave: 90 days/year (after probation completion)</li>
+                <li>• Maternity Leave: 60 days</li>
+                <li>• Parental Leave: 5 days/year</li>
+                <li>• Study Leave: 10 days/year</li>
+                <li>• Hajj Leave: 30 days (after 2 years service, once only)</li>
+              </ul>
+              <p className="text-xs text-muted-foreground font-medium mt-2">
+                This will update balances for the selected year based on each employee's hire date and service duration.
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-4 items-center">
+            <div className="flex-1">
+              <Label htmlFor="autoYear">Select Year</Label>
+              <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value))}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {years.map(year => (
+                    <SelectItem key={year} value={year.toString()}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button 
+              onClick={handleAutoAllocate} 
+              disabled={autoAllocating}
+              className="mt-6"
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${autoAllocating ? 'animate-spin' : ''}`} />
+              {autoAllocating ? 'Calculating...' : 'Auto-Calculate Balances'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -325,11 +410,23 @@ export const LeaveBalanceManagement = () => {
             ) : (
               balances.map(balance => (
                 <div key={balance.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <h4 className="font-medium">{balance.employee_name}</h4>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-medium">{balance.employee_name}</h4>
+                      {balance.auto_calculated && (
+                        <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                          Auto-calculated
+                        </span>
+                      )}
+                    </div>
                     <p className="text-sm text-muted-foreground">
                       {balance.leave_type_name}: {balance.used_days}/{balance.allocated_days} days used
                     </p>
+                    {balance.auto_calculated && balance.service_months_at_allocation !== undefined && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Based on {balance.service_months_at_allocation} months of service
+                      </p>
+                    )}
                     <div className="w-full bg-muted rounded-full h-2 mt-2">
                       <div 
                         className="bg-primary h-2 rounded-full" 

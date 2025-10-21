@@ -272,30 +272,36 @@ export type Database = {
       employee_leave_balances: {
         Row: {
           allocated_days: number
+          auto_calculated: boolean | null
           created_at: string
           employee_id: string
           id: string
           leave_type_id: string
+          service_months_at_allocation: number | null
           updated_at: string
           used_days: number
           year: number
         }
         Insert: {
           allocated_days?: number
+          auto_calculated?: boolean | null
           created_at?: string
           employee_id: string
           id?: string
           leave_type_id: string
+          service_months_at_allocation?: number | null
           updated_at?: string
           used_days?: number
           year?: number
         }
         Update: {
           allocated_days?: number
+          auto_calculated?: boolean | null
           created_at?: string
           employee_id?: string
           id?: string
           leave_type_id?: string
+          service_months_at_allocation?: number | null
           updated_at?: string
           used_days?: number
           year?: number
@@ -315,6 +321,7 @@ export type Database = {
           manager_id: string | null
           phone: string | null
           position: string
+          probation_end_date: string | null
           salary: number | null
           staff_id: string | null
           status: string
@@ -334,6 +341,7 @@ export type Database = {
           manager_id?: string | null
           phone?: string | null
           position: string
+          probation_end_date?: string | null
           salary?: number | null
           staff_id?: string | null
           status?: string
@@ -353,6 +361,7 @@ export type Database = {
           manager_id?: string | null
           phone?: string | null
           position?: string
+          probation_end_date?: string | null
           salary?: number | null
           staff_id?: string | null
           status?: string
@@ -383,8 +392,12 @@ export type Database = {
           employee_id: string | null
           end_date: string
           id: string
+          is_first_hajj: boolean | null
           leave_type_id: string | null
+          medical_certificate_url: string | null
+          payment_type: string | null
           reason: string | null
+          relationship: string | null
           review_comments: string | null
           reviewed_at: string | null
           reviewed_by: string | null
@@ -398,8 +411,12 @@ export type Database = {
           employee_id?: string | null
           end_date: string
           id?: string
+          is_first_hajj?: boolean | null
           leave_type_id?: string | null
+          medical_certificate_url?: string | null
+          payment_type?: string | null
           reason?: string | null
+          relationship?: string | null
           review_comments?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -413,8 +430,12 @@ export type Database = {
           employee_id?: string | null
           end_date?: string
           id?: string
+          is_first_hajj?: boolean | null
           leave_type_id?: string | null
+          medical_certificate_url?: string | null
+          payment_type?: string | null
           reason?: string | null
+          relationship?: string | null
           review_comments?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -723,6 +744,10 @@ export type Database = {
       }
     }
     Functions: {
+      auto_allocate_leave_balances: {
+        Args: { p_year: number }
+        Returns: undefined
+      }
       bootstrap_user: {
         Args: {
           _department?: string
@@ -733,6 +758,14 @@ export type Database = {
         }
         Returns: Json
       }
+      calculate_leave_entitlement: {
+        Args: {
+          p_employee_id: string
+          p_leave_type_name: string
+          p_year: number
+        }
+        Returns: number
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -742,6 +775,10 @@ export type Database = {
       }
       is_admin: {
         Args: { _user_id: string }
+        Returns: boolean
+      }
+      is_probation_completed: {
+        Args: { p_employee_id: string }
         Returns: boolean
       }
       send_notification_email: {

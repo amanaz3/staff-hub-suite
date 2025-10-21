@@ -23,9 +23,12 @@ export const LeaveManagement = ({ userRole }: LeaveManagementProps) => {
     type: "",
     startDate: "",
     endDate: "",
-    reason: ""
+    reason: "",
+    medicalCertificateUrl: "",
+    relationship: ""
   });
   const [employeeId, setEmployeeId] = useState<string>("");
+  const [employeeData, setEmployeeData] = useState<any>(null);
   const [attendanceExceptions, setAttendanceExceptions] = useState([]);
   const { toast } = useToast();
   const { user } = useAuth();
@@ -36,12 +39,13 @@ export const LeaveManagement = ({ userRole }: LeaveManagementProps) => {
       if (user?.id) {
         const { data, error } = await supabase
           .from('employees')
-          .select('id')
+          .select('id, hire_date, probation_end_date, full_name')
           .eq('user_id', user.id)
           .single();
         
         if (data && !error) {
           setEmployeeId(data.id);
+          setEmployeeData(data);
           
           // Fetch attendance exceptions for this employee
           const { data: exceptions, error: exceptionsError } = await supabase
@@ -194,19 +198,32 @@ export const LeaveManagement = ({ userRole }: LeaveManagementProps) => {
       const endDate = new Date(newRequest.endDate);
       const totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
+      const insertData: any = {
+        employee_id: employeeId,
+        leave_type_id: leaveType.id,
+        start_date: newRequest.startDate,
+        end_date: newRequest.endDate,
+        total_days: totalDays,
+        reason: newRequest.reason,
+        status: 'pending'
+      };
+
+      // Add conditional fields based on leave type
+      if (newRequest.medicalCertificateUrl) {
+        insertData.medical_certificate_url = newRequest.medicalCertificateUrl;
+      }
+      if (newRequest.relationship) {
+        insertData.relationship = newRequest.relationship;
+      }
+
       const { error } = await supabase
         .from('leave_requests')
-        .insert({
-          employee_id: employeeId,
-          leave_type_id: leaveType.id,
-          start_date: newRequest.startDate,
-          end_date: newRequest.endDate,
-          total_days: totalDays,
-          reason: newRequest.reason,
-          status: 'pending'
-        });
+        .insert(insertData);
 
-      if (error) throw error;
+      if (error) {
+        // Handle validation errors from database trigger
+        throw error;
+      }
 
       // Send email notification to admins
       try {
@@ -267,7 +284,7 @@ export const LeaveManagement = ({ userRole }: LeaveManagementProps) => {
         setLeaveRequests(requests || []);
       }
 
-      setNewRequest({ type: "", startDate: "", endDate: "", reason: "" });
+      setNewRequest({ type: "", startDate: "", endDate: "", reason: "", medicalCertificateUrl: "", relationship: "" });
       setShowNewRequest(false);
     } catch (error) {
       console.error('Error submitting leave request:', error);
@@ -417,6 +434,28 @@ export const LeaveManagement = ({ userRole }: LeaveManagementProps) => {
           </Button>
         )}
       </div>
+
+      {/* Service Duration Info (Staff only) */}
+      {userRole === 'staff' && employeeData && (
+        <Card className="bg-primary/5 border-primary/20">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Employment Status</p>
+                <p className="text-lg font-semibold text-foreground mt-1">
+                  {employeeData.probation_end_date && new Date(employeeData.probation_end_date) > new Date() 
+                    ? `Probation until ${formatDate(employeeData.probation_end_date)}`
+                    : 'Active Employee'}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Hire Date: {formatDate(employeeData.hire_date)}
+                </p>
+              </div>
+              <FileText className="h-8 w-8 text-primary" />
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Leave Balances (Staff only) */}
       {userRole === 'staff' && (
@@ -653,6 +692,131 @@ export const LeaveManagement = ({ userRole }: LeaveManagementProps) => {
                     rows={3}
                   />
                 </div>
+
+                {/* Conditional Fields based on Leave Type */}
+                {newRequest.type.includes('sick') && (
+                  <div className="space-y-2 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                    <p className="text-sm text-yellow-800 dark:text-yellow-200 font-medium">
+                      ⚠️ Sick Leave Requirements (UAE Labour Law):
+                    </p>
+                    <ul className="text-xs text-yellow-700 dark:text-yellow-300 space-y-1 ml-4">
+                      <li>• Available only after probation period completion</li>
+                      <li>• Medical certificate required for absences exceeding 3 days</li>
+                      <li>• Payment: Days 1-15 full pay, 16-45 half pay, 46-90 unpaid</li>
+                    </ul>
+                    {(() => {
+                      const startDate = new Date(newRequest.startDate);
+                      const endDate = new Date(newRequest.endDate);
+                      const totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                      return totalDays > 3 ? (
+                        <div className="space-y-2 mt-3">
+                          <Label htmlFor="medicalCertificate">Medical Certificate URL *</Label>
+                          <Input
+                            id="medicalCertificate"
+                            type="url"
+                            placeholder="Enter document URL or upload to HR system first"
+                            value={newRequest.medicalCertificateUrl}
+                            onChange={(e) => setNewRequest({...newRequest, medicalCertificateUrl: e.target.value})}
+                            required
+                          />
+                          <p className="text-xs text-muted-foreground">Required for sick leave exceeding 3 days</p>
+                        </div>
+                      ) : null;
+                    })()}
+                  </div>
+                )}
+
+                {newRequest.type.includes('compassionate') && (
+                  <div className="space-y-2 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <p className="text-sm text-blue-800 dark:text-blue-200 font-medium">
+                      ℹ️ Compassionate Leave (Bereavement)
+                    </p>
+                    <p className="text-xs text-blue-700 dark:text-blue-300">
+                      5 days for spouse, 3 days for parent/child/sibling/grandparent/grandchild
+                    </p>
+                    <div className="space-y-2 mt-3">
+                      <Label htmlFor="relationship">Relationship *</Label>
+                      <Select 
+                        value={newRequest.relationship} 
+                        onValueChange={(value) => setNewRequest({...newRequest, relationship: value})}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select relationship" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="spouse">Spouse</SelectItem>
+                          <SelectItem value="parent">Parent</SelectItem>
+                          <SelectItem value="child">Child</SelectItem>
+                          <SelectItem value="sibling">Sibling</SelectItem>
+                          <SelectItem value="grandparent">Grandparent</SelectItem>
+                          <SelectItem value="grandchild">Grandchild</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
+
+                {newRequest.type.includes('hajj') && (
+                  <div className="space-y-2 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                    <p className="text-sm text-purple-800 dark:text-purple-200 font-medium">
+                      🕌 Hajj Leave Requirements:
+                    </p>
+                    <ul className="text-xs text-purple-700 dark:text-purple-300 space-y-1 ml-4">
+                      <li>• Requires minimum 2 years of service</li>
+                      <li>• 30 days unpaid leave</li>
+                      <li>• Can only be taken once per employment</li>
+                    </ul>
+                  </div>
+                )}
+
+                {newRequest.type.includes('study') && (
+                  <div className="space-y-2 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                    <p className="text-sm text-green-800 dark:text-green-200 font-medium">
+                      📚 Study Leave Requirements:
+                    </p>
+                    <p className="text-xs text-green-700 dark:text-green-300">
+                      10 working days per year - Proof of enrollment required
+                    </p>
+                  </div>
+                )}
+
+                {newRequest.type.includes('parental') && (
+                  <div className="space-y-2 p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-200 dark:border-indigo-800">
+                    <p className="text-sm text-indigo-800 dark:text-indigo-200 font-medium">
+                      👶 Parental Leave (For Fathers):
+                    </p>
+                    <p className="text-xs text-indigo-700 dark:text-indigo-300">
+                      5 working days paid - Must be taken within 6 months of child birth
+                    </p>
+                  </div>
+                )}
+
+                {newRequest.type.includes('maternity') && (
+                  <div className="space-y-2 p-4 bg-pink-50 dark:bg-pink-900/20 rounded-lg border border-pink-200 dark:border-pink-800">
+                    <p className="text-sm text-pink-800 dark:text-pink-200 font-medium">
+                      🤱 Maternity Leave:
+                    </p>
+                    <p className="text-xs text-pink-700 dark:text-pink-300">
+                      60 calendar days (45 days full pay + 15 days half pay) + optional 45 days unpaid
+                    </p>
+                  </div>
+                )}
+
+                {newRequest.type.includes('annual') && employeeData && (
+                  <div className="space-y-2 p-4 bg-primary/10 rounded-lg border border-primary/20">
+                    <p className="text-sm text-foreground font-medium">
+                      Annual Leave Entitlement:
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {(() => {
+                        const serviceMonths = Math.floor((new Date().getTime() - new Date(employeeData.hire_date).getTime()) / (1000 * 60 * 60 * 24 * 30));
+                        if (serviceMonths < 6) return '• Not eligible yet (requires 6 months service)';
+                        if (serviceMonths < 12) return '• Eligible for 2 days per completed month of service';
+                        return '• Eligible for 30 calendar days per year';
+                      })()}
+                    </p>
+                  </div>
+                )}
 
                 <div className="flex justify-end space-x-3">
                   <Button variant="outline" onClick={() => setShowNewRequest(false)}>
