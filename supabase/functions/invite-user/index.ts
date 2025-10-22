@@ -15,6 +15,7 @@ interface InviteUserRequest {
   division: string;
   department: string;
   position: string;
+  hire_date?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -24,7 +25,24 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { email, full_name, role, staff_id, division, department, position }: InviteUserRequest = await req.json();
+    const { email, full_name, role, staff_id, division, department, position, hire_date }: InviteUserRequest = await req.json();
+
+    // Validate hire_date if provided
+    if (hire_date) {
+      const hireDate = new Date(hire_date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      if (hireDate > today) {
+        return new Response(
+          JSON.stringify({ error: "Hire date cannot be in the future" }),
+          {
+            status: 400,
+            headers: { "Content-Type": "application/json", ...corsHeaders },
+          }
+        );
+      }
+    }
 
     // Validate staff_id format (must be 4 digits)
     if (!/^\d{4}$/.test(staff_id)) {
@@ -80,7 +98,8 @@ const handler = async (req: Request): Promise<Response> => {
         staff_id,
         division,
         department,
-        position
+        position,
+        hire_date: hire_date || new Date().toISOString().split('T')[0]
       }
     });
 

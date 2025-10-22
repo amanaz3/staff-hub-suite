@@ -69,7 +69,8 @@ export const UserManagement = () => {
     staff_id: '',
     division: '',
     department: '',
-    position: ''
+    position: '',
+    hire_date: new Date().toISOString().split('T')[0]
   });
 
   // Fetch divisions for dropdown
@@ -253,7 +254,8 @@ export const UserManagement = () => {
         staff_id: '',
         division: '',
         department: '',
-        position: ''
+        position: '',
+        hire_date: new Date().toISOString().split('T')[0]
       });
       setStaffIdError('');
 
@@ -321,7 +323,8 @@ export const UserManagement = () => {
           division: editingEmployee.division || '',
           department: editingEmployee.department,
           position: editingEmployee.position,
-          status: editingEmployee.status
+          status: editingEmployee.status,
+          hire_date: editingEmployee.hire_date
         }
       });
 
@@ -553,6 +556,20 @@ export const UserManagement = () => {
                   onChange={(e) => setFormData({ ...formData, position: e.target.value })}
                   required
                 />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="hire_date">Hire Date *</Label>
+                <Input
+                  id="hire_date"
+                  type="date"
+                  value={formData.hire_date}
+                  max={new Date().toISOString().split('T')[0]}
+                  onChange={(e) => setFormData({ ...formData, hire_date: e.target.value })}
+                  required
+                />
+                <p className="text-xs text-muted-foreground">
+                  Probation period (6 months) and leave entitlements are calculated from this date
+                </p>
               </div>
             </div>
             <Button type="submit" disabled={inviting} className="w-full">
@@ -812,6 +829,20 @@ export const UserManagement = () => {
                       <SelectItem value="inactive">Inactive</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-hire_date">Hire Date *</Label>
+                  <Input
+                    id="edit-hire_date"
+                    type="date"
+                    value={editingEmployee.hire_date || ''}
+                    max={new Date().toISOString().split('T')[0]}
+                    onChange={(e) => setEditingEmployee({ ...editingEmployee, hire_date: e.target.value })}
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Probation end date will be auto-calculated (6 months from hire date)
+                  </p>
                 </div>
               </div>
               <div className="flex gap-2 justify-end">

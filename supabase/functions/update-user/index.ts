@@ -16,6 +16,7 @@ interface UpdateUserRequest {
   department: string;
   position: string;
   status: string;
+  hire_date?: string;
 }
 
 serve(async (req) => {
@@ -65,10 +66,22 @@ serve(async (req) => {
       division,
       department,
       position,
-      status
+      status,
+      hire_date
     }: UpdateUserRequest = await req.json();
 
     console.log('Updating user:', { employee_id, email, staff_id });
+
+    // Validate hire_date if provided
+    if (hire_date) {
+      const hireDate = new Date(hire_date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      if (hireDate > today) {
+        throw new Error('Hire date cannot be in the future');
+      }
+    }
 
     // Validate staff_id format (4 digits)
     if (!/^\d{4}$/.test(staff_id)) {
@@ -105,19 +118,31 @@ serve(async (req) => {
       throw new Error('Cannot remove your own admin role');
     }
 
+    // Prepare employee update with optional hire_date
+    const employeeUpdate: any = {
+      full_name,
+      email,
+      staff_id,
+      division,
+      department,
+      position,
+      status,
+      updated_at: new Date().toISOString()
+    };
+
+    // Add hire_date and auto-calculate probation_end_date if hire_date is provided
+    if (hire_date) {
+      employeeUpdate.hire_date = hire_date;
+      const hireDate = new Date(hire_date);
+      const probationEnd = new Date(hireDate);
+      probationEnd.setMonth(probationEnd.getMonth() + 6);
+      employeeUpdate.probation_end_date = probationEnd.toISOString().split('T')[0];
+    }
+
     // Update employees table
     const { error: updateEmployeeError } = await supabaseAdmin
       .from('employees')
-      .update({
-        full_name,
-        email,
-        staff_id,
-        division,
-        department,
-        position,
-        status,
-        updated_at: new Date().toISOString()
-      })
+      .update(employeeUpdate)
       .eq('id', employee_id);
 
     if (updateEmployeeError) {

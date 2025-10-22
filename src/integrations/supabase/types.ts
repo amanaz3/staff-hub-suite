@@ -50,7 +50,7 @@ export type Database = {
           date: string
           employee_id: string | null
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           is_wfh: boolean
           notes: string | null
           status: string
@@ -65,7 +65,7 @@ export type Database = {
           date: string
           employee_id?: string | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           is_wfh?: boolean
           notes?: string | null
           status?: string
@@ -80,7 +80,7 @@ export type Database = {
           date?: string
           employee_id?: string | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           is_wfh?: boolean
           notes?: string | null
           status?: string
@@ -773,10 +773,7 @@ export type Database = {
         }
         Returns: boolean
       }
-      is_admin: {
-        Args: { _user_id: string }
-        Returns: boolean
-      }
+      is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_probation_completed: {
         Args: { p_employee_id: string }
         Returns: boolean

@@ -15,11 +15,14 @@ import {
   AlertCircle,
   Menu,
   TrendingUp,
-  Activity
+  Activity,
+  Briefcase,
+  CheckCircle2
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import { calculateServiceDuration, formatServiceDuration, isProbationCompleted } from "@/lib/utils";
 
 interface DashboardProps {
   userRole: 'admin' | 'staff';
@@ -66,6 +69,10 @@ export const Dashboard = ({ userRole, currentUser, userProfile, onLogout, onNavi
     lateCheckIns: 0
   });
   const [loading, setLoading] = useState(true);
+  const [employmentInfo, setEmploymentInfo] = useState<{
+    hireDate: string;
+    probationEndDate: string | null;
+  } | null>(null);
   
   // Get today's date in YYYY-MM-DD format
   const today = new Date().toISOString().split('T')[0];
@@ -206,6 +213,34 @@ export const Dashboard = ({ userRole, currentUser, userProfile, onLogout, onNavi
     fetchDashboardData();
   }, [today, userRole]);
 
+  // Fetch employment info for staff users
+  useEffect(() => {
+    const fetchEmploymentInfo = async () => {
+      if (userRole !== 'staff') return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('employees')
+          .select('hire_date, probation_end_date')
+          .eq('user_id', userProfile.user_id)
+          .single();
+
+        if (error) {
+          console.error('Error fetching employment info:', error);
+        } else if (data) {
+          setEmploymentInfo({
+            hireDate: data.hire_date,
+            probationEndDate: data.probation_end_date
+          });
+        }
+      } catch (error) {
+        console.error('Error in fetchEmploymentInfo:', error);
+      }
+    };
+
+    fetchEmploymentInfo();
+  }, [userRole, userProfile.user_id]);
+
   const getAttendanceStatus = (record: TodayAttendance) => {
     if (!record.clock_in_time) return 'absent';
     
@@ -265,9 +300,110 @@ export const Dashboard = ({ userRole, currentUser, userProfile, onLogout, onNavi
       <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {/* Clock In/Out for Staff */}
         {userRole === 'staff' && (
-          <div className="mb-8">
-            <ClockInOut userProfile={userProfile} />
-          </div>
+          <>
+            <div className="mb-6">
+              <ClockInOut userProfile={userProfile} />
+            </div>
+
+            {/* Employment Information Card */}
+            {employmentInfo && (
+              <div className="mb-8">
+                <EnhancedCard variant="elevated" className="bg-gradient-to-br from-primary/5 to-primary/10">
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 pb-2 border-b">
+                      <Briefcase className="h-5 w-5 text-primary" />
+                      <h3 className="text-lg font-semibold">My Employment Information</h3>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Hire Date */}
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Hire Date</p>
+                        <p className="text-base font-medium">
+                          {format(new Date(employmentInfo.hireDate), 'dd MMMM yyyy')}
+                        </p>
+                      </div>
+
+                      {/* Service Duration */}
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Service Duration</p>
+                        <p className="text-base font-medium">
+                          {(() => {
+                            const { years, months } = calculateServiceDuration(employmentInfo.hireDate);
+                            return formatServiceDuration(years, months);
+                          })()}
+                        </p>
+                      </div>
+
+                      {/* Probation Status */}
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Probation Status</p>
+                        {isProbationCompleted(employmentInfo.hireDate, employmentInfo.probationEndDate) ? (
+                          <Badge variant="default" className="bg-success text-success-foreground">
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            Completed
+                          </Badge>
+                        ) : (
+                          <div className="space-y-1">
+                            <Badge variant="secondary" className="bg-warning/10 text-warning">
+                              <Clock className="h-3 w-3 mr-1" />
+                              In Probation
+                            </Badge>
+                            {employmentInfo.probationEndDate && (
+                              <p className="text-xs text-muted-foreground">
+                                Ends: {format(new Date(employmentInfo.probationEndDate), 'dd MMM yyyy')}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Leave Eligibility */}
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Leave Eligibility</p>
+                        {(() => {
+                          const { totalMonths } = calculateServiceDuration(employmentInfo.hireDate);
+                          const probationComplete = isProbationCompleted(employmentInfo.hireDate, employmentInfo.probationEndDate);
+                          
+                          if (totalMonths < 6) {
+                            return (
+                              <Badge variant="secondary" className="bg-muted">
+                                <CalendarIcon className="h-3 w-3 mr-1" />
+                                {6 - totalMonths} month{6 - totalMonths !== 1 ? 's' : ''} until annual leave
+                              </Badge>
+                            );
+                          } else if (totalMonths < 12) {
+                            return (
+                              <Badge variant="default" className="bg-primary/10 text-primary">
+                                <CalendarIcon className="h-3 w-3 mr-1" />
+                                {(totalMonths - 5) * 2} days annual leave
+                              </Badge>
+                            );
+                          } else {
+                            return (
+                              <Badge variant="default" className="bg-success/10 text-success">
+                                <CheckCircle2 className="h-3 w-3 mr-1" />
+                                Full entitlement (30 days)
+                              </Badge>
+                            );
+                          }
+                        })()}
+                      </div>
+                    </div>
+
+                    {!isProbationCompleted(employmentInfo.hireDate, employmentInfo.probationEndDate) && (
+                      <div className="pt-2 border-t">
+                        <p className="text-xs text-muted-foreground flex items-start gap-2">
+                          <AlertCircle className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                          <span>Sick leave (90 days) will be available after completing your probation period.</span>
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </EnhancedCard>
+              </div>
+            )}
+          </>
         )}
 
         {/* Dashboard Stats (Admin only) */}
