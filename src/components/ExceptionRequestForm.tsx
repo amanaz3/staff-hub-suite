@@ -224,19 +224,24 @@ export const ExceptionRequestForm = ({ attendanceId, employeeId, onSuccess }: Ex
       if (error) throw error;
 
       // Send email notification to admins
+      let adminProfiles;
+      let employeeData;
+      
       try {
         // Get admin emails
-        const { data: adminProfiles } = await supabase
+        const { data: adminProfilesData } = await supabase
           .from('profiles')
           .select('email, full_name')
           .eq('role', 'admin');
+        adminProfiles = adminProfilesData;
 
         // Get employee details
-        const { data: employeeData } = await supabase
+        const { data: employeeDataResult } = await supabase
           .from('employees')
           .select('full_name')
           .eq('id', employeeId)
           .single();
+        employeeData = employeeDataResult;
 
         // Send email to each admin
         if (adminProfiles && adminProfiles.length > 0 && employeeData) {
@@ -257,8 +262,16 @@ export const ExceptionRequestForm = ({ attendanceId, employeeId, onSuccess }: Ex
           }
         }
       } catch (emailError) {
-        console.log('Email notification failed:', emailError);
-        // Don't fail the whole operation if email fails
+        console.error('Failed to send admin notification:', emailError);
+        console.error('Admin profiles data:', adminProfiles);
+        console.error('Employee data:', employeeData);
+        
+        // Show a warning toast that notification may have failed
+        toast({
+          title: "Warning",
+          description: "Request submitted, but admin notification may have failed",
+          variant: "destructive"
+        });
       }
 
       toast({
