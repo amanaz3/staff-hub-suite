@@ -546,28 +546,29 @@ export const Dashboard = ({ userRole, currentUser, userProfile, onLogout, onNavi
               variant="elevated"
               className="border-warning/50 bg-warning/5"
             >
-              <div className="flex items-start gap-3">
-                <div className="p-2 bg-warning/10 rounded-lg">
-                  <AlertCircle className="h-5 w-5 text-warning" />
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3 flex-1">
+                  <div className="p-2 bg-warning/10 rounded-lg">
+                    <AlertCircle className="h-5 w-5 text-warning" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-foreground font-medium mb-1">
+                      {dashboardStats.lateCheckIns} staff members had late check-ins today
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Consider following up for attendance policy compliance.
+                    </p>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <p className="text-sm text-foreground font-medium mb-1">
-                    {dashboardStats.lateCheckIns} staff members had late check-ins today
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Consider following up for attendance policy compliance.
-                  </p>
-                  {onNavigate && (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => onNavigate('attendance')}
-                      className="mt-3"
-                    >
-                      Review Attendance
-                    </Button>
-                  )}
-                </div>
+                {onNavigate && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => onNavigate('attendance')}
+                  >
+                    Review Attendance
+                  </Button>
+                )}
               </div>
             </EnhancedCard>
           )}
