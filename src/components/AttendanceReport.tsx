@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { StatusBadge } from '@/components/ui/status-badge';
-import { Download, Search, FileText } from 'lucide-react';
+import { Download, Search, FileText, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, getDay, isFuture, startOfDay } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -23,6 +23,8 @@ export const AttendanceReport = () => {
   const [showLateOnly, setShowLateOnly] = useState(false);
   const [showEarlyOnly, setShowEarlyOnly] = useState(false);
   const [showAbsentOnly, setShowAbsentOnly] = useState(false);
+  const [sortColumn, setSortColumn] = useState<string>('date');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   // Generate last 12 months for dropdown
   const monthOptions = useMemo(() => {
@@ -200,6 +202,64 @@ export const AttendanceReport = () => {
     });
   }, [attendanceData, searchTerm, selectedEmployee, showExceptionsOnly, showLateOnly, showEarlyOnly, showAbsentOnly]);
 
+  const sortedData = useMemo(() => {
+    if (!filteredData.length) return [];
+
+    const sorted = [...filteredData].sort((a, b) => {
+      let compareValue = 0;
+
+      switch (sortColumn) {
+        case 'employeeId':
+          compareValue = a.employeeId.localeCompare(b.employeeId);
+          break;
+        case 'employeeName':
+          compareValue = a.employeeName.localeCompare(b.employeeName);
+          break;
+        case 'date':
+          compareValue = new Date(a.date).getTime() - new Date(b.date).getTime();
+          break;
+        case 'lateHours':
+          compareValue = parseFloat(a.lateHours) - parseFloat(b.lateHours);
+          break;
+        case 'earlyHours':
+          compareValue = parseFloat(a.earlyHours) - parseFloat(b.earlyHours);
+          break;
+        case 'pendingLeaves':
+          compareValue = a.pendingLeaves - b.pendingLeaves;
+          break;
+        default:
+          compareValue = 0;
+      }
+
+      return sortDirection === 'asc' ? compareValue : -compareValue;
+    });
+
+    return sorted;
+  }, [filteredData, sortColumn, sortDirection]);
+
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      if (sortDirection === 'desc') {
+        setSortDirection('asc');
+      } else {
+        // Reset to default (date desc)
+        setSortColumn('date');
+        setSortDirection('desc');
+      }
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
+
+  const getSortIcon = (column: string) => {
+    if (sortColumn !== column) {
+      return <ArrowUpDown className="h-4 w-4 ml-1 opacity-40" />;
+    }
+    return sortDirection === 'asc' 
+      ? <ArrowUp className="h-4 w-4 ml-1" />
+      : <ArrowDown className="h-4 w-4 ml-1" />;
+  };
 
   const handleExport = () => {
     if (!filteredData.length) {
@@ -222,7 +282,7 @@ export const AttendanceReport = () => {
 
     const csvContent = [
       headers.join(','),
-      ...filteredData.map(row => [
+      ...sortedData.map(row => [
         row.employeeId,
         `"${row.employeeName}"`,
         row.date,
@@ -359,15 +419,63 @@ export const AttendanceReport = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Staff ID</TableHead>
-                <TableHead>Staff Name</TableHead>
-                <TableHead>Date</TableHead>
+                <TableHead 
+                  className="cursor-pointer hover:bg-accent/50 transition-colors"
+                  onClick={() => handleSort('employeeId')}
+                >
+                  <div className="flex items-center">
+                    Staff ID
+                    {getSortIcon('employeeId')}
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer hover:bg-accent/50 transition-colors"
+                  onClick={() => handleSort('employeeName')}
+                >
+                  <div className="flex items-center">
+                    Staff Name
+                    {getSortIcon('employeeName')}
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer hover:bg-accent/50 transition-colors"
+                  onClick={() => handleSort('date')}
+                >
+                  <div className="flex items-center">
+                    Date
+                    {getSortIcon('date')}
+                  </div>
+                </TableHead>
                 <TableHead>Day</TableHead>
                 <TableHead>Clock In</TableHead>
                 <TableHead>Clock Out</TableHead>
-                <TableHead>Late Hours</TableHead>
-                <TableHead>Early Hours</TableHead>
-                <TableHead>Leave Pending</TableHead>
+                <TableHead 
+                  className="cursor-pointer hover:bg-accent/50 transition-colors"
+                  onClick={() => handleSort('lateHours')}
+                >
+                  <div className="flex items-center">
+                    Late Hours
+                    {getSortIcon('lateHours')}
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer hover:bg-accent/50 transition-colors"
+                  onClick={() => handleSort('earlyHours')}
+                >
+                  <div className="flex items-center">
+                    Early Hours
+                    {getSortIcon('earlyHours')}
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer hover:bg-accent/50 transition-colors"
+                  onClick={() => handleSort('pendingLeaves')}
+                >
+                  <div className="flex items-center">
+                    Leave Pending
+                    {getSortIcon('pendingLeaves')}
+                  </div>
+                </TableHead>
                 <TableHead>Remark</TableHead>
               </TableRow>
             </TableHeader>
@@ -385,7 +493,7 @@ export const AttendanceReport = () => {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredData.map((record, index) => (
+                sortedData.map((record, index) => (
                   <TableRow key={index}>
                     <TableCell className="font-medium">{record.employeeId}</TableCell>
                     <TableCell>{record.employeeName}</TableCell>
