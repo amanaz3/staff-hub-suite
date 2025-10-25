@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Clock, Plus, Save, Edit } from 'lucide-react';
+import { Clock, Plus, Save, Edit, Trash2 } from 'lucide-react';
 
 interface WorkSchedule {
   id: string;
@@ -203,6 +203,34 @@ export const WorkScheduleManagement = () => {
     });
   };
 
+  const handleDelete = async (schedule: WorkSchedule) => {
+    if (!confirm(`Are you sure you want to delete the work schedule for ${schedule.employee_name}?`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('work_schedules')
+        .update({ is_active: false })
+        .eq('id', schedule.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Work schedule deleted successfully"
+      });
+
+      fetchSchedules();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
   const getAvailableEmployees = () => {
     const scheduledEmployeeIds = schedules.map(s => s.employee_id);
     return employees.filter(emp => !scheduledEmployeeIds.includes(emp.id));
@@ -332,13 +360,22 @@ export const WorkScheduleManagement = () => {
                       Working: {schedule.working_days?.join(', ') || 'Not set'}
                     </p>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleEdit(schedule)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEdit(schedule)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleDelete(schedule)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               ))
             )}
