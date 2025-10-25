@@ -254,11 +254,11 @@ export const AttendanceReport = () => {
 
   const getSortIcon = (column: string) => {
     if (sortColumn !== column) {
-      return <ArrowUpDown className="h-4 w-4 ml-1 opacity-40" />;
+      return <ArrowUpDown className="h-3.5 w-3.5 ml-1.5 opacity-50" />;
     }
     return sortDirection === 'asc' 
-      ? <ArrowUp className="h-4 w-4 ml-1" />
-      : <ArrowDown className="h-4 w-4 ml-1" />;
+      ? <ArrowUp className="h-3.5 w-3.5 ml-1.5 text-primary" />
+      : <ArrowDown className="h-3.5 w-3.5 ml-1.5 text-primary" />;
   };
 
   const handleExport = () => {
@@ -420,63 +420,63 @@ export const AttendanceReport = () => {
             <TableHeader>
               <TableRow>
                 <TableHead 
-                  className="cursor-pointer hover:bg-accent/50 transition-colors"
+                  className="cursor-pointer hover:bg-accent transition-colors select-none"
                   onClick={() => handleSort('employeeId')}
                 >
-                  <div className="flex items-center">
+                  <div className="flex items-center whitespace-nowrap font-semibold">
                     Staff ID
                     {getSortIcon('employeeId')}
                   </div>
                 </TableHead>
                 <TableHead 
-                  className="cursor-pointer hover:bg-accent/50 transition-colors"
+                  className="cursor-pointer hover:bg-accent transition-colors select-none"
                   onClick={() => handleSort('employeeName')}
                 >
-                  <div className="flex items-center">
+                  <div className="flex items-center whitespace-nowrap font-semibold">
                     Staff Name
                     {getSortIcon('employeeName')}
                   </div>
                 </TableHead>
                 <TableHead 
-                  className="cursor-pointer hover:bg-accent/50 transition-colors"
+                  className="cursor-pointer hover:bg-accent transition-colors select-none"
                   onClick={() => handleSort('date')}
                 >
-                  <div className="flex items-center">
+                  <div className="flex items-center whitespace-nowrap font-semibold">
                     Date
                     {getSortIcon('date')}
                   </div>
                 </TableHead>
-                <TableHead>Day</TableHead>
-                <TableHead>Clock In</TableHead>
-                <TableHead>Clock Out</TableHead>
+                <TableHead className="font-semibold">Day</TableHead>
+                <TableHead className="font-semibold">Clock In</TableHead>
+                <TableHead className="font-semibold">Clock Out</TableHead>
                 <TableHead 
-                  className="cursor-pointer hover:bg-accent/50 transition-colors"
+                  className="cursor-pointer hover:bg-accent transition-colors select-none"
                   onClick={() => handleSort('lateHours')}
                 >
-                  <div className="flex items-center">
+                  <div className="flex items-center whitespace-nowrap font-semibold">
                     Late Hours
                     {getSortIcon('lateHours')}
                   </div>
                 </TableHead>
                 <TableHead 
-                  className="cursor-pointer hover:bg-accent/50 transition-colors"
+                  className="cursor-pointer hover:bg-accent transition-colors select-none"
                   onClick={() => handleSort('earlyHours')}
                 >
-                  <div className="flex items-center">
+                  <div className="flex items-center whitespace-nowrap font-semibold">
                     Early Hours
                     {getSortIcon('earlyHours')}
                   </div>
                 </TableHead>
                 <TableHead 
-                  className="cursor-pointer hover:bg-accent/50 transition-colors"
+                  className="cursor-pointer hover:bg-accent transition-colors select-none"
                   onClick={() => handleSort('pendingLeaves')}
                 >
-                  <div className="flex items-center">
+                  <div className="flex items-center whitespace-nowrap font-semibold">
                     Leave Pending
                     {getSortIcon('pendingLeaves')}
                   </div>
                 </TableHead>
-                <TableHead>Remark</TableHead>
+                <TableHead className="font-semibold">Remark</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
