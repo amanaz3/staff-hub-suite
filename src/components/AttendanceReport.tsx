@@ -3,14 +3,16 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { StatusBadge } from '@/components/ui/status-badge';
-import { Download, Search, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ArrowUpDown, ArrowUp, ArrowDown, LayoutGrid, LayoutList } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, getDay } from 'date-fns';
 import { toast } from 'sonner';
+import { AttendanceSummaryCards } from './attendance/AttendanceSummaryCards';
+import { AttendanceCharts } from './attendance/AttendanceCharts';
+import { AttendanceFilters } from './attendance/AttendanceFilters';
+import { AttendanceTableSummary } from './attendance/AttendanceTableSummary';
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -21,9 +23,8 @@ export const AttendanceReport = () => {
   const currentDate = new Date();
   const [selectedMonth, setSelectedMonth] = useState(format(currentDate, 'yyyy-MM'));
   const [searchTerm, setSearchTerm] = useState('');
-  const [showLateOnly, setShowLateOnly] = useState(false);
-  const [showEarlyOnly, setShowEarlyOnly] = useState(false);
-  const [showAbsentOnly, setShowAbsentOnly] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'late' | 'early' | 'absent' | 'ontime' | 'issues'>('all');
+  const [viewMode, setViewMode] = useState<'summary' | 'detailed'>('summary');
   const [sortField, setSortField] = useState<SortField>('date');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
@@ -173,12 +174,21 @@ export const AttendanceReport = () => {
         record.employeeId.toLowerCase().includes(searchTerm.toLowerCase()) ||
         record.employeeName.toLowerCase().includes(searchTerm.toLowerCase());
 
-      // Status filters
-      const matchesLate = !showLateOnly || parseFloat(record.lateHours) > 0;
-      const matchesEarly = !showEarlyOnly || parseFloat(record.earlyHours) > 0;
-      const matchesAbsent = !showAbsentOnly || record.remark === 'Absent';
+      // Status filter
+      let matchesStatus = true;
+      if (statusFilter === 'late') {
+        matchesStatus = parseFloat(record.lateHours) > 0;
+      } else if (statusFilter === 'early') {
+        matchesStatus = parseFloat(record.earlyHours) > 0;
+      } else if (statusFilter === 'absent') {
+        matchesStatus = record.remark === 'Absent';
+      } else if (statusFilter === 'ontime') {
+        matchesStatus = record.remark === 'On Time';
+      } else if (statusFilter === 'issues') {
+        matchesStatus = record.remark !== 'On Time' && record.remark !== 'Absent';
+      }
 
-      return matchesSearch && matchesLate && matchesEarly && matchesAbsent;
+      return matchesSearch && matchesStatus;
     });
 
     // Apply sorting
@@ -201,7 +211,52 @@ export const AttendanceReport = () => {
     }
 
     return filtered;
-  }, [attendanceData, searchTerm, showLateOnly, showEarlyOnly, showAbsentOnly, sortField, sortDirection]);
+  }, [attendanceData, searchTerm, statusFilter, sortField, sortDirection]);
+
+  // Calculate summary statistics
+  const summaryStats = useMemo(() => {
+    if (!attendanceData) {
+      return {
+        totalRecords: 0,
+        onTimeCount: 0,
+        lateCount: 0,
+        earlyCount: 0,
+        absentCount: 0,
+        pendingLeavesCount: 0,
+      };
+    }
+
+    const stats = {
+      totalRecords: attendanceData.length,
+      onTimeCount: 0,
+      lateCount: 0,
+      earlyCount: 0,
+      absentCount: 0,
+      pendingLeavesCount: 0,
+    };
+
+    attendanceData.forEach(record => {
+      if (record.remark === 'On Time') stats.onTimeCount++;
+      if (record.remark === 'Late' || record.remark === 'Late & Early') stats.lateCount++;
+      if (record.remark === 'Early' || record.remark === 'Late & Early') stats.earlyCount++;
+      if (record.remark === 'Absent') stats.absentCount++;
+      if (record.pendingLeaves > 0) stats.pendingLeavesCount += record.pendingLeaves;
+    });
+
+    return stats;
+  }, [attendanceData]);
+
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (statusFilter !== 'all') count++;
+    if (searchTerm) count++;
+    return count;
+  }, [statusFilter, searchTerm]);
+
+  const handleClearFilters = () => {
+    setStatusFilter('all');
+    setSearchTerm('');
+  };
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -289,82 +344,51 @@ export const AttendanceReport = () => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Employee Attendance Report</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle>Employee Attendance Report</CardTitle>
+          <Tabs value={viewMode} onValueChange={(v: any) => setViewMode(v)}>
+            <TabsList>
+              <TabsTrigger value="summary" className="gap-2">
+                <LayoutGrid className="h-4 w-4" />
+                Summary
+              </TabsTrigger>
+              <TabsTrigger value="detailed" className="gap-2">
+                <LayoutList className="h-4 w-4" />
+                Detailed
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-6">
+        {/* Summary Cards */}
+        <AttendanceSummaryCards {...summaryStats} />
+
         {/* Filters */}
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="w-full md:w-48">
-            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {monthOptions.map(month => (
-                  <SelectItem key={month.value} value={month.value}>
-                    {month.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        <AttendanceFilters
+          selectedMonth={selectedMonth}
+          setSelectedMonth={setSelectedMonth}
+          monthOptions={monthOptions}
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          statusFilter={statusFilter}
+          setStatusFilter={setStatusFilter}
+          onExport={handleExport}
+          activeFilterCount={activeFilterCount}
+          onClearFilters={handleClearFilters}
+        />
 
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by Staff ID or Name..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-          </div>
+        {/* Charts */}
+        {!isLoading && filteredData.length > 0 && (
+          <AttendanceCharts data={filteredData} />
+        )}
 
-          <Button onClick={handleExport} variant="outline" className="gap-2">
-            <Download className="h-4 w-4" />
-            Export CSV
-          </Button>
-        </div>
+        {/* View Mode Content */}
+        {viewMode === 'summary' ? (
+          <AttendanceTableSummary data={filteredData} isLoading={isLoading} />
+        ) : (
 
-        {/* Status Filters */}
-        <div className="flex flex-wrap gap-4">
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="late"
-              checked={showLateOnly}
-              onCheckedChange={(checked) => setShowLateOnly(checked as boolean)}
-            />
-            <label htmlFor="late" className="text-sm cursor-pointer">
-              Show Late Clock-ins Only
-            </label>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="early"
-              checked={showEarlyOnly}
-              onCheckedChange={(checked) => setShowEarlyOnly(checked as boolean)}
-            />
-            <label htmlFor="early" className="text-sm cursor-pointer">
-              Show Early Clock-outs Only
-            </label>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="absent"
-              checked={showAbsentOnly}
-              onCheckedChange={(checked) => setShowAbsentOnly(checked as boolean)}
-            />
-            <label htmlFor="absent" className="text-sm cursor-pointer">
-              Show Absents Only
-            </label>
-          </div>
-        </div>
-
-        {/* Table */}
-        <div className="border rounded-lg">
+          <div className="border rounded-lg">
           <Table>
             <TableHeader>
               <TableRow>
@@ -487,7 +511,8 @@ export const AttendanceReport = () => {
               )}
             </TableBody>
           </Table>
-        </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
