@@ -18,6 +18,21 @@ function isWorkingDay(date: Date, workingDays: string[]): boolean {
   return workingDays.includes(dayName);
 }
 
+// Helper function to format time in 12-hour format
+function formatTime12Hour(date: Date): string {
+  const hours = date.getHours();
+  const minutes = date.getMinutes();
+  const seconds = date.getSeconds();
+  
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const displayHours = hours % 12 || 12; // Convert 0 to 12 for midnight
+  
+  const formattedMinutes = minutes.toString().padStart(2, '0');
+  const formattedSeconds = seconds.toString().padStart(2, '0');
+  
+  return `${displayHours}:${formattedMinutes}:${formattedSeconds} ${period}`;
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -142,8 +157,8 @@ const handler = async (req: Request): Promise<Response> => {
             type: 'late',
             details: {
               late_hours: Math.round(lateHours * 100) / 100,
-              clock_in_time: clockInTime.toLocaleTimeString(),
-              scheduled_start: scheduledStart.toLocaleTimeString()
+              clock_in_time: formatTime12Hour(clockInTime),
+              scheduled_start: formatTime12Hour(scheduledStart)
             }
           });
         }
@@ -159,8 +174,8 @@ const handler = async (req: Request): Promise<Response> => {
               type: 'early',
               details: {
                 early_hours: Math.round(earlyHours * 100) / 100,
-                clock_out_time: clockOutTime.toLocaleTimeString(),
-                scheduled_end: scheduledEnd.toLocaleTimeString()
+                clock_out_time: formatTime12Hour(clockOutTime),
+                scheduled_end: formatTime12Hour(scheduledEnd)
               }
             });
           }
