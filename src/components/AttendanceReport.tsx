@@ -11,16 +11,15 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import { Download, Search, FileText } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, getDay, isFuture, startOfDay } from 'date-fns';
 import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 export const AttendanceReport = () => {
-  const navigate = useNavigate();
   const currentDate = new Date();
   const [selectedMonth, setSelectedMonth] = useState(format(currentDate, 'yyyy-MM'));
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedEmployee, setSelectedEmployee] = useState<string>('all');
+  const [showExceptionsOnly, setShowExceptionsOnly] = useState(false);
   const [showLateOnly, setShowLateOnly] = useState(false);
   const [showEarlyOnly, setShowEarlyOnly] = useState(false);
   const [showAbsentOnly, setShowAbsentOnly] = useState(false);
@@ -192,13 +191,14 @@ export const AttendanceReport = () => {
         record.employeeName.toLowerCase().includes(searchTerm.toLowerCase());
 
       const matchesEmployee = selectedEmployee === 'all' || record.employeeDbId === selectedEmployee;
+      const matchesExceptions = !showExceptionsOnly || record.remark !== 'On Time';
       const matchesLate = !showLateOnly || parseFloat(record.lateHours) > 0;
       const matchesEarly = !showEarlyOnly || parseFloat(record.earlyHours) > 0;
       const matchesAbsent = !showAbsentOnly || record.remark === 'Absent';
 
-      return matchesSearch && matchesEmployee && matchesLate && matchesEarly && matchesAbsent;
+      return matchesSearch && matchesEmployee && matchesExceptions && matchesLate && matchesEarly && matchesAbsent;
     });
-  }, [attendanceData, searchTerm, selectedEmployee, showLateOnly, showEarlyOnly, showAbsentOnly]);
+  }, [attendanceData, searchTerm, selectedEmployee, showExceptionsOnly, showLateOnly, showEarlyOnly, showAbsentOnly]);
 
 
   const handleExport = () => {
@@ -306,12 +306,12 @@ export const AttendanceReport = () => {
           </div>
 
           <Button 
-            onClick={() => navigate('/admin?tab=exceptions')} 
-            variant="outline" 
+            onClick={() => setShowExceptionsOnly(!showExceptionsOnly)} 
+            variant={showExceptionsOnly ? "default" : "outline"}
             className="gap-2"
           >
             <FileText className="h-4 w-4" />
-            Exception Days
+            Exception Days {showExceptionsOnly && '✓'}
           </Button>
 
           <Button onClick={handleExport} variant="outline" className="gap-2">
