@@ -48,10 +48,6 @@
     --destructive: 0 85% 60%;
     --destructive-foreground: 0 0% 100%;
     --destructive-light: 0 85% 95%;
-    
-    --info: 200 85% 50%;
-    --info-foreground: 0 0% 100%;
-    --info-light: 200 85% 95%;
 
     /* Interactive states */
     --border: 220 15% 92%;

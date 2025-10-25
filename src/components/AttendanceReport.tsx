@@ -4,29 +4,23 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { StatusBadge } from '@/components/ui/status-badge';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowUpDown, ArrowUp, ArrowDown, LayoutGrid, LayoutList } from 'lucide-react';
+import { Download, Search } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, getDay } from 'date-fns';
 import { toast } from 'sonner';
-import { AttendanceSummaryCards } from './attendance/AttendanceSummaryCards';
-import { AttendanceCharts } from './attendance/AttendanceCharts';
-import { AttendanceFilters } from './attendance/AttendanceFilters';
-import { AttendanceTableSummary } from './attendance/AttendanceTableSummary';
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-
-type SortField = 'employeeId' | 'employeeName' | 'date' | 'clockIn' | 'clockOut' | 'lateHours' | 'earlyHours' | 'pendingLeaves' | 'remark';
-type SortDirection = 'asc' | 'desc' | null;
 
 export const AttendanceReport = () => {
   const currentDate = new Date();
   const [selectedMonth, setSelectedMonth] = useState(format(currentDate, 'yyyy-MM'));
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'late' | 'early' | 'absent' | 'ontime' | 'issues'>('all');
-  const [viewMode, setViewMode] = useState<'summary' | 'detailed'>('summary');
-  const [sortField, setSortField] = useState<SortField>('date');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [showLateOnly, setShowLateOnly] = useState(false);
+  const [showEarlyOnly, setShowEarlyOnly] = useState(false);
+  const [showAbsentOnly, setShowAbsentOnly] = useState(false);
 
   // Generate last 12 months for dropdown
   const monthOptions = useMemo(() => {
@@ -168,125 +162,19 @@ export const AttendanceReport = () => {
   const filteredData = useMemo(() => {
     if (!attendanceData) return [];
 
-    let filtered = attendanceData.filter(record => {
-      // Search filter
+    return attendanceData.filter(record => {
       const matchesSearch = !searchTerm || 
         record.employeeId.toLowerCase().includes(searchTerm.toLowerCase()) ||
         record.employeeName.toLowerCase().includes(searchTerm.toLowerCase());
 
-      // Status filter
-      let matchesStatus = true;
-      if (statusFilter === 'late') {
-        matchesStatus = parseFloat(record.lateHours) > 0;
-      } else if (statusFilter === 'early') {
-        matchesStatus = parseFloat(record.earlyHours) > 0;
-      } else if (statusFilter === 'absent') {
-        matchesStatus = record.remark === 'Absent';
-      } else if (statusFilter === 'ontime') {
-        matchesStatus = record.remark === 'On Time';
-      } else if (statusFilter === 'issues') {
-        matchesStatus = record.remark !== 'On Time' && record.remark !== 'Absent';
-      }
+      const matchesLate = !showLateOnly || parseFloat(record.lateHours) > 0;
+      const matchesEarly = !showEarlyOnly || parseFloat(record.earlyHours) > 0;
+      const matchesAbsent = !showAbsentOnly || record.remark === 'Absent';
 
-      return matchesSearch && matchesStatus;
+      return matchesSearch && matchesLate && matchesEarly && matchesAbsent;
     });
+  }, [attendanceData, searchTerm, showLateOnly, showEarlyOnly, showAbsentOnly]);
 
-    // Apply sorting
-    if (sortField && sortDirection) {
-      filtered = [...filtered].sort((a, b) => {
-        let aValue = a[sortField];
-        let bValue = b[sortField];
-
-        // Convert to numbers for numeric fields
-        if (sortField === 'lateHours' || sortField === 'earlyHours' || sortField === 'pendingLeaves') {
-          aValue = parseFloat(aValue as string) || 0;
-          bValue = parseFloat(bValue as string) || 0;
-        }
-
-        // Compare values
-        if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
-        if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
-        return 0;
-      });
-    }
-
-    return filtered;
-  }, [attendanceData, searchTerm, statusFilter, sortField, sortDirection]);
-
-  // Calculate summary statistics
-  const summaryStats = useMemo(() => {
-    if (!attendanceData) {
-      return {
-        totalRecords: 0,
-        onTimeCount: 0,
-        lateCount: 0,
-        earlyCount: 0,
-        absentCount: 0,
-        pendingLeavesCount: 0,
-      };
-    }
-
-    const stats = {
-      totalRecords: attendanceData.length,
-      onTimeCount: 0,
-      lateCount: 0,
-      earlyCount: 0,
-      absentCount: 0,
-      pendingLeavesCount: 0,
-    };
-
-    attendanceData.forEach(record => {
-      if (record.remark === 'On Time') stats.onTimeCount++;
-      if (record.remark === 'Late' || record.remark === 'Late & Early') stats.lateCount++;
-      if (record.remark === 'Early' || record.remark === 'Late & Early') stats.earlyCount++;
-      if (record.remark === 'Absent') stats.absentCount++;
-      if (record.pendingLeaves > 0) stats.pendingLeavesCount += record.pendingLeaves;
-    });
-
-    return stats;
-  }, [attendanceData]);
-
-  const activeFilterCount = useMemo(() => {
-    let count = 0;
-    if (statusFilter !== 'all') count++;
-    if (searchTerm) count++;
-    return count;
-  }, [statusFilter, searchTerm]);
-
-  const handleClearFilters = () => {
-    setStatusFilter('all');
-    setSearchTerm('');
-  };
-
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      // Cycle through: asc -> desc -> null
-      if (sortDirection === 'asc') {
-        setSortDirection('desc');
-      } else if (sortDirection === 'desc') {
-        setSortDirection(null);
-        setSortField('date');
-      } else {
-        setSortDirection('asc');
-      }
-    } else {
-      setSortField(field);
-      setSortDirection('asc');
-    }
-  };
-
-  const SortIcon = ({ field }: { field: SortField }) => {
-    if (sortField !== field) {
-      return <ArrowUpDown className="h-4 w-4 ml-1 opacity-40" />;
-    }
-    if (sortDirection === 'asc') {
-      return <ArrowUp className="h-4 w-4 ml-1" />;
-    }
-    if (sortDirection === 'desc') {
-      return <ArrowDown className="h-4 w-4 ml-1" />;
-    }
-    return <ArrowUpDown className="h-4 w-4 ml-1 opacity-40" />;
-  };
 
   const handleExport = () => {
     if (!filteredData.length) {
@@ -344,136 +232,93 @@ export const AttendanceReport = () => {
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle>Employee Attendance Report</CardTitle>
-          <Tabs value={viewMode} onValueChange={(v: any) => setViewMode(v)}>
-            <TabsList>
-              <TabsTrigger value="summary" className="gap-2">
-                <LayoutGrid className="h-4 w-4" />
-                Summary
-              </TabsTrigger>
-              <TabsTrigger value="detailed" className="gap-2">
-                <LayoutList className="h-4 w-4" />
-                Detailed
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
+        <CardTitle>Employee Attendance Report</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Summary Cards */}
-        <AttendanceSummaryCards {...summaryStats} />
-
+      <CardContent className="space-y-4">
         {/* Filters */}
-        <AttendanceFilters
-          selectedMonth={selectedMonth}
-          setSelectedMonth={setSelectedMonth}
-          monthOptions={monthOptions}
-          searchTerm={searchTerm}
-          setSearchTerm={setSearchTerm}
-          statusFilter={statusFilter}
-          setStatusFilter={setStatusFilter}
-          onExport={handleExport}
-          activeFilterCount={activeFilterCount}
-          onClearFilters={handleClearFilters}
-        />
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="w-full sm:w-48">
+            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {monthOptions.map(month => (
+                  <SelectItem key={month.value} value={month.value}>
+                    {month.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-        {/* Charts */}
-        {!isLoading && filteredData.length > 0 && (
-          <AttendanceCharts data={filteredData} />
-        )}
+          <div className="flex-1">
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by Staff ID or Name..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+          </div>
 
-        {/* View Mode Content */}
-        {viewMode === 'summary' ? (
-          <AttendanceTableSummary data={filteredData} isLoading={isLoading} />
-        ) : (
+          <Button onClick={handleExport} variant="outline" className="gap-2">
+            <Download className="h-4 w-4" />
+            Export
+          </Button>
+        </div>
 
-          <div className="border rounded-lg">
+        {/* Filter Checkboxes */}
+        <div className="flex flex-wrap gap-4">
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="late" 
+              checked={showLateOnly}
+              onCheckedChange={(checked) => setShowLateOnly(checked as boolean)}
+            />
+            <label htmlFor="late" className="text-sm cursor-pointer">
+              Show Late Only
+            </label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="early" 
+              checked={showEarlyOnly}
+              onCheckedChange={(checked) => setShowEarlyOnly(checked as boolean)}
+            />
+            <label htmlFor="early" className="text-sm cursor-pointer">
+              Show Early Only
+            </label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="absent" 
+              checked={showAbsentOnly}
+              onCheckedChange={(checked) => setShowAbsentOnly(checked as boolean)}
+            />
+            <label htmlFor="absent" className="text-sm cursor-pointer">
+              Show Absent Only
+            </label>
+          </div>
+        </div>
+
+        {/* Table */}
+        <div className="border rounded-lg">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead 
-                  className="cursor-pointer select-none hover:bg-muted/50"
-                  onClick={() => handleSort('employeeId')}
-                >
-                  <div className="flex items-center">
-                    Staff ID
-                    <SortIcon field="employeeId" />
-                  </div>
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer select-none hover:bg-muted/50"
-                  onClick={() => handleSort('employeeName')}
-                >
-                  <div className="flex items-center">
-                    Staff Name
-                    <SortIcon field="employeeName" />
-                  </div>
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer select-none hover:bg-muted/50"
-                  onClick={() => handleSort('date')}
-                >
-                  <div className="flex items-center">
-                    Date
-                    <SortIcon field="date" />
-                  </div>
-                </TableHead>
+                <TableHead>Staff ID</TableHead>
+                <TableHead>Staff Name</TableHead>
+                <TableHead>Date</TableHead>
                 <TableHead>Day</TableHead>
-                <TableHead 
-                  className="cursor-pointer select-none hover:bg-muted/50"
-                  onClick={() => handleSort('clockIn')}
-                >
-                  <div className="flex items-center">
-                    Clock In
-                    <SortIcon field="clockIn" />
-                  </div>
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer select-none hover:bg-muted/50"
-                  onClick={() => handleSort('clockOut')}
-                >
-                  <div className="flex items-center">
-                    Clock Out
-                    <SortIcon field="clockOut" />
-                  </div>
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer select-none hover:bg-muted/50"
-                  onClick={() => handleSort('lateHours')}
-                >
-                  <div className="flex items-center">
-                    Late Hours
-                    <SortIcon field="lateHours" />
-                  </div>
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer select-none hover:bg-muted/50"
-                  onClick={() => handleSort('earlyHours')}
-                >
-                  <div className="flex items-center">
-                    Early Hours
-                    <SortIcon field="earlyHours" />
-                  </div>
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer select-none hover:bg-muted/50"
-                  onClick={() => handleSort('pendingLeaves')}
-                >
-                  <div className="flex items-center">
-                    Leave Pending
-                    <SortIcon field="pendingLeaves" />
-                  </div>
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer select-none hover:bg-muted/50"
-                  onClick={() => handleSort('remark')}
-                >
-                  <div className="flex items-center">
-                    Remark
-                    <SortIcon field="remark" />
-                  </div>
-                </TableHead>
+                <TableHead>Clock In</TableHead>
+                <TableHead>Clock Out</TableHead>
+                <TableHead>Late Hours</TableHead>
+                <TableHead>Early Hours</TableHead>
+                <TableHead>Leave Pending</TableHead>
+                <TableHead>Remark</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -511,8 +356,7 @@ export const AttendanceReport = () => {
               )}
             </TableBody>
           </Table>
-          </div>
-        )}
+        </div>
       </CardContent>
     </Card>
   );
