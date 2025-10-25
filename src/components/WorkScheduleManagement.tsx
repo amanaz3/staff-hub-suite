@@ -194,6 +194,13 @@ export const WorkScheduleManagement = () => {
     setEndTime(schedule.end_time);
     setMinimumHours(schedule.minimum_daily_hours);
     setWorkingDays(schedule.working_days || ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']);
+    
+    // Scroll to form and show feedback
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    toast({
+      title: "Edit Mode",
+      description: `Editing schedule for ${schedule.employee_name}`,
+    });
   };
 
   const getAvailableEmployees = () => {
