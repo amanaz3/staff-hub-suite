@@ -8,16 +8,19 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { StatusBadge } from '@/components/ui/status-badge';
-import { Download, Search } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, getDay } from 'date-fns';
+import { Download, Search, FileText } from 'lucide-react';
+import { format, startOfMonth, endOfMonth, getDay, isFuture, startOfDay } from 'date-fns';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 export const AttendanceReport = () => {
+  const navigate = useNavigate();
   const currentDate = new Date();
   const [selectedMonth, setSelectedMonth] = useState(format(currentDate, 'yyyy-MM'));
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedEmployee, setSelectedEmployee] = useState<string>('all');
   const [showLateOnly, setShowLateOnly] = useState(false);
   const [showEarlyOnly, setShowEarlyOnly] = useState(false);
   const [showAbsentOnly, setShowAbsentOnly] = useState(false);
@@ -34,6 +37,21 @@ export const AttendanceReport = () => {
     }
     return months;
   }, []);
+
+  // Fetch employees for dropdown
+  const { data: employeesList } = useQuery({
+    queryKey: ['employees-list'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('employees')
+        .select('id, employee_id, full_name')
+        .eq('status', 'active')
+        .order('full_name');
+      
+      if (error) throw error;
+      return data;
+    }
+  });
 
   const { data: attendanceData, isLoading } = useQuery({
     queryKey: ['attendance-report', selectedMonth],
@@ -97,6 +115,11 @@ export const AttendanceReport = () => {
           const currentDay = new Date(monthDate.getFullYear(), monthDate.getMonth(), day);
           const dateStr = format(currentDay, 'yyyy-MM-dd');
           
+          // Skip future dates
+          if (isFuture(startOfDay(currentDay))) {
+            continue;
+          }
+          
           const attRecord = attendance?.find(
             a => a.employee_id === employee.id && a.date === dateStr
           );
@@ -143,6 +166,7 @@ export const AttendanceReport = () => {
           result.push({
             employeeId: employee.employee_id,
             employeeName: employee.full_name,
+            employeeDbId: employee.id,
             date: dateStr,
             day: DAYS[getDay(currentDay)],
             clockIn: attRecord?.clock_in_time ? format(new Date(attRecord.clock_in_time), 'HH:mm') : '--:--',
@@ -167,13 +191,14 @@ export const AttendanceReport = () => {
         record.employeeId.toLowerCase().includes(searchTerm.toLowerCase()) ||
         record.employeeName.toLowerCase().includes(searchTerm.toLowerCase());
 
+      const matchesEmployee = selectedEmployee === 'all' || record.employeeDbId === selectedEmployee;
       const matchesLate = !showLateOnly || parseFloat(record.lateHours) > 0;
       const matchesEarly = !showEarlyOnly || parseFloat(record.earlyHours) > 0;
       const matchesAbsent = !showAbsentOnly || record.remark === 'Absent';
 
-      return matchesSearch && matchesLate && matchesEarly && matchesAbsent;
+      return matchesSearch && matchesEmployee && matchesLate && matchesEarly && matchesAbsent;
     });
-  }, [attendanceData, searchTerm, showLateOnly, showEarlyOnly, showAbsentOnly]);
+  }, [attendanceData, searchTerm, selectedEmployee, showLateOnly, showEarlyOnly, showAbsentOnly]);
 
 
   const handleExport = () => {
@@ -252,6 +277,22 @@ export const AttendanceReport = () => {
             </Select>
           </div>
 
+          <div className="w-full sm:w-64">
+            <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+              <SelectTrigger>
+                <SelectValue placeholder="All Employees" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Employees</SelectItem>
+                {employeesList?.map(emp => (
+                  <SelectItem key={emp.id} value={emp.id}>
+                    {emp.full_name} ({emp.employee_id})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="flex-1">
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -263,6 +304,15 @@ export const AttendanceReport = () => {
               />
             </div>
           </div>
+
+          <Button 
+            onClick={() => navigate('/admin?tab=exceptions')} 
+            variant="outline" 
+            className="gap-2"
+          >
+            <FileText className="h-4 w-4" />
+            Exception Days
+          </Button>
 
           <Button onClick={handleExport} variant="outline" className="gap-2">
             <Download className="h-4 w-4" />
