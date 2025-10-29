@@ -27,14 +27,9 @@ export default function ResetPassword() {
     if (accessToken && type === 'recovery') {
       setHasToken(true);
     } else {
-      toast({
-        title: "Invalid reset link",
-        description: "This password reset link is invalid or has expired.",
-        variant: "destructive",
-      });
-      setTimeout(() => navigate('/auth'), 2000);
+      setHasToken(false);
     }
-  }, [navigate, toast]);
+  }, []);
 
   const validatePassword = () => {
     if (newPassword.length < 8) {
@@ -100,11 +95,29 @@ export default function ResetPassword() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-secondary/20 p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <CardTitle>Invalid Reset Link</CardTitle>
-            <CardDescription>
-              Redirecting to login page...
+            <div className="mx-auto mb-4 w-12 h-12 bg-destructive/10 rounded-full flex items-center justify-center">
+              <Lock className="h-6 w-6 text-destructive" />
+            </div>
+            <CardTitle>Invalid or Expired Reset Link</CardTitle>
+            <CardDescription className="mt-2">
+              This password reset link is invalid or has expired. Reset links are single-use and expire after a short period for security.
             </CardDescription>
           </CardHeader>
+          <CardContent className="space-y-3">
+            <Button
+              onClick={() => navigate('/auth')}
+              className="w-full"
+            >
+              Request New Reset Link
+            </Button>
+            <button
+              type="button"
+              onClick={() => navigate('/auth')}
+              className="w-full text-sm text-muted-foreground hover:text-foreground"
+            >
+              Back to login
+            </button>
+          </CardContent>
         </Card>
       </div>
     );
