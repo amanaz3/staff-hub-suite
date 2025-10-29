@@ -137,7 +137,7 @@ export const UserManagement = () => {
           .from('employees')
           .select(`
             *,
-            manager:employees!manager_id(full_name)
+            manager:employees!employees_manager_id_fkey(full_name)
           `);
         
         // Filter deleted users unless showDeletedUsers is true
