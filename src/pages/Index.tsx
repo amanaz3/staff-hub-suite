@@ -54,9 +54,11 @@ const Index = () => {
   const navigationItems = [
     { id: 'dashboard', label: 'Dashboard', icon: BarChart },
     { id: 'leaves', label: 'Leave Management', icon: Calendar },
-    ...(profile?.role === 'admin' ? [
+    ...(profile?.role === 'admin' || profile?.role === 'manager' ? [
       { id: 'attendance', label: 'Attendance Report', icon: ClipboardList },
       { id: 'documents', label: 'Staff Documents', icon: FileText },
+    ] : []),
+    ...(profile?.role === 'admin' ? [
       { id: 'users', label: 'User Management', icon: Users },
       { id: 'emails', label: 'Test Emails', icon: Settings }
     ] : [])
@@ -132,7 +134,7 @@ const Index = () => {
                   {profile?.full_name || profile?.email?.split('@')[0]}
                 </p>
                 <p className="text-xs text-muted-foreground truncate">
-                  {profile?.role === 'admin' ? 'Administrator' : 'Staff Member'}
+                  {profile?.role === 'admin' ? 'Administrator' : profile?.role === 'manager' ? 'Manager' : 'Staff Member'}
                 </p>
               </div>
             </div>

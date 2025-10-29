@@ -16,6 +16,7 @@ interface InviteUserRequest {
   department: string;
   position: string;
   hire_date?: string;
+  manager_id?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -25,7 +26,7 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { email, full_name, role, staff_id, division, department, position, hire_date }: InviteUserRequest = await req.json();
+    const { email, full_name, role, staff_id, division, department, position, hire_date, manager_id }: InviteUserRequest = await req.json();
 
     // Validate hire_date if provided
     if (hire_date) {
@@ -99,7 +100,8 @@ const handler = async (req: Request): Promise<Response> => {
         division,
         department,
         position,
-        hire_date: hire_date || new Date().toISOString().split('T')[0]
+        hire_date: hire_date || new Date().toISOString().split('T')[0],
+        manager_id: manager_id || null
       }
     });
 

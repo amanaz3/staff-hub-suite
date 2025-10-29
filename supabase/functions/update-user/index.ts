@@ -11,12 +11,13 @@ interface UpdateUserRequest {
   full_name: string;
   email: string;
   staff_id: string;
-  role: 'admin' | 'staff';
+  role: 'admin' | 'staff' | 'manager';
   division: string;
   department: string;
   position: string;
   status: string;
   hire_date?: string;
+  manager_id?: string;
 }
 
 serve(async (req) => {
@@ -67,7 +68,8 @@ serve(async (req) => {
       department,
       position,
       status,
-      hire_date
+      hire_date,
+      manager_id
     }: UpdateUserRequest = await req.json();
 
     console.log('Updating user:', { employee_id, email, staff_id });
@@ -118,7 +120,7 @@ serve(async (req) => {
       throw new Error('Cannot remove your own admin role');
     }
 
-    // Prepare employee update with optional hire_date
+    // Prepare employee update with optional hire_date and manager_id
     const employeeUpdate: any = {
       full_name,
       email,
@@ -127,6 +129,7 @@ serve(async (req) => {
       department,
       position,
       status,
+      manager_id: manager_id || null,
       updated_at: new Date().toISOString()
     };
 

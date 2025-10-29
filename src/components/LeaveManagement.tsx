@@ -13,7 +13,7 @@ import { ExceptionRequestForm } from "@/components/ExceptionRequestForm";
 import { supabase } from "@/integrations/supabase/client";
 import { Calendar, Plus, Clock, CheckCircle, XCircle, AlertCircle, FileText } from "lucide-react";
 interface LeaveManagementProps {
-  userRole: 'admin' | 'staff';
+  userRole: 'admin' | 'staff' | 'manager';
 }
 export const LeaveManagement = ({
   userRole

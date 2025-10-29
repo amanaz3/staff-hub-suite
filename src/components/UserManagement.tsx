@@ -28,6 +28,8 @@ interface Employee {
   hire_date?: string;
   wfh_enabled?: boolean;
   user_id?: string;
+  manager_id?: string;
+  manager_name?: string;
 }
 
 export const UserManagement = () => {
@@ -47,6 +49,7 @@ export const UserManagement = () => {
   const [editStaffIdError, setEditStaffIdError] = useState('');
   const [statusToggleEmployee, setStatusToggleEmployee] = useState<Employee | null>(null);
   const [togglingStatus, setTogglingStatus] = useState(false);
+  const [managers, setManagers] = useState<Employee[]>([]);
   
   // Check if user is admin using the proper role check
   const isAdmin = hasRole('admin');
@@ -70,7 +73,8 @@ export const UserManagement = () => {
     division: '',
     department: '',
     position: '',
-    hire_date: new Date().toISOString().split('T')[0]
+    hire_date: new Date().toISOString().split('T')[0],
+    manager_id: ''
   });
 
   // Fetch divisions for dropdown
@@ -87,8 +91,31 @@ export const UserManagement = () => {
       }
     };
     
+    const fetchManagers = async () => {
+      // Fetch employees who have admin or manager role
+      const { data: adminRoles } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .in('role', ['admin', 'manager']);
+      
+      if (adminRoles) {
+        const userIds = adminRoles.map(r => r.user_id);
+        const { data: managerData } = await supabase
+          .from('employees')
+          .select('id, full_name, staff_id, employee_id, department, position, status')
+          .in('user_id', userIds)
+          .eq('status', 'active')
+          .order('full_name');
+        
+        if (managerData) {
+          setManagers(managerData as Employee[]);
+        }
+      }
+    };
+    
     if (isAdmin) {
       fetchDivisions();
+      fetchManagers();
     }
   }, [isAdmin]);
 
@@ -97,13 +124,24 @@ export const UserManagement = () => {
       let data, error;
       
       if (isAdmin) {
-        // Admin gets full employee data
+        // Admin gets full employee data with manager info
         const result = await supabase
           .from('employees')
-          .select('*')
+          .select(`
+            *,
+            manager:employees!manager_id(full_name)
+          `)
           .order('created_at', { ascending: false });
-        data = result.data;
-        error = result.error;
+        
+        if (result.data) {
+          data = result.data.map((emp: any) => ({
+            ...emp,
+            manager_name: emp.manager?.full_name || null
+          }));
+          error = null;
+        } else {
+          error = result.error;
+        }
       } else {
         // Non-admin gets directory view
         const result = await supabase
@@ -255,7 +293,8 @@ export const UserManagement = () => {
         division: '',
         department: '',
         position: '',
-        hire_date: new Date().toISOString().split('T')[0]
+        hire_date: new Date().toISOString().split('T')[0],
+        manager_id: ''
       });
       setStaffIdError('');
 
@@ -324,7 +363,8 @@ export const UserManagement = () => {
           department: editingEmployee.department,
           position: editingEmployee.position,
           status: editingEmployee.status,
-          hire_date: editingEmployee.hire_date
+          hire_date: editingEmployee.hire_date,
+          manager_id: editingEmployee.manager_id || null
         }
       });
 
@@ -475,10 +515,11 @@ export const UserManagement = () => {
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="staff">Staff</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
-                  </SelectContent>
+                   <SelectContent>
+                     <SelectItem value="staff">Staff</SelectItem>
+                     <SelectItem value="manager">Manager</SelectItem>
+                     <SelectItem value="admin">Admin</SelectItem>
+                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
@@ -571,6 +612,28 @@ export const UserManagement = () => {
                   Probation period (6 months) and leave entitlements are calculated from this date
                 </p>
               </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="manager_id">Manager (Optional)</Label>
+                <Select 
+                  value={formData.manager_id} 
+                  onValueChange={(value) => setFormData({ ...formData, manager_id: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select manager (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">No Manager</SelectItem>
+                    {managers.map((manager) => (
+                      <SelectItem key={manager.id} value={manager.id}>
+                        {manager.full_name} ({manager.staff_id})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Assign a manager who will approve this employee's requests
+                </p>
+              </div>
             </div>
             <Button type="submit" disabled={inviting} className="w-full">
               {inviting ? 'Inviting...' : 'Invite User'}
@@ -604,6 +667,7 @@ export const UserManagement = () => {
                     <TableHead>Division</TableHead>
                     <TableHead>Department</TableHead>
                     <TableHead>Designation</TableHead>
+                    {isAdmin && <TableHead>Manager</TableHead>}
                     <TableHead>Status</TableHead>
                     <TableHead>Hire Date</TableHead>
                     {isAdmin && <TableHead className="text-right min-w-[180px]">Actions</TableHead>}
@@ -611,13 +675,14 @@ export const UserManagement = () => {
               </TableHeader>
               <TableBody>
                 {employees.map((employee) => (
-                  <TableRow key={employee.id}>
+                <TableRow key={employee.id}>
                     <TableCell className="font-mono">{employee.staff_id || 'N/A'}</TableCell>
                     <TableCell>{employee.full_name}</TableCell>
                     {isAdmin && <TableCell>{employee.email || 'N/A'}</TableCell>}
                     <TableCell>{employee.division || 'N/A'}</TableCell>
                     <TableCell>{employee.department}</TableCell>
                     <TableCell>{employee.position}</TableCell>
+                    {isAdmin && <TableCell>{employee.manager_name || 'No Manager'}</TableCell>}
                     <TableCell>
                       <Badge variant={employee.status === 'active' ? 'default' : 'secondary'}>
                         {employee.status}
@@ -775,6 +840,7 @@ export const UserManagement = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="staff">Staff</SelectItem>
+                      <SelectItem value="manager">Manager</SelectItem>
                       <SelectItem value="admin">Admin</SelectItem>
                     </SelectContent>
                   </Select>
@@ -842,6 +908,28 @@ export const UserManagement = () => {
                   />
                   <p className="text-xs text-muted-foreground">
                     Probation end date will be auto-calculated (6 months from hire date)
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-manager_id">Manager (Optional)</Label>
+                  <Select 
+                    value={editingEmployee.manager_id || ''} 
+                    onValueChange={(value) => setEditingEmployee({ ...editingEmployee, manager_id: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select manager (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">No Manager</SelectItem>
+                      {managers.filter(m => m.id !== editingEmployee.id).map((manager) => (
+                        <SelectItem key={manager.id} value={manager.id}>
+                          {manager.full_name} ({manager.staff_id})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Assign a manager who will approve this employee's requests
                   </p>
                 </div>
               </div>

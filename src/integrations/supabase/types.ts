@@ -781,6 +781,7 @@ export type Database = {
         }
         Returns: number
       }
+      get_employee_id_from_user: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -799,7 +800,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "staff"
+      app_role: "admin" | "staff" | "manager"
       document_type_enum:
         | "emirates_id"
         | "passport"
@@ -936,7 +937,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "staff"],
+      app_role: ["admin", "staff", "manager"],
       document_type_enum: [
         "emirates_id",
         "passport",
