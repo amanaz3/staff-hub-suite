@@ -615,14 +615,14 @@ export const UserManagement = () => {
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="manager_id">Manager (Optional)</Label>
                 <Select 
-                  value={formData.manager_id} 
-                  onValueChange={(value) => setFormData({ ...formData, manager_id: value })}
+                  value={formData.manager_id || 'none'} 
+                  onValueChange={(value) => setFormData({ ...formData, manager_id: value === 'none' ? '' : value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select manager (optional)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No Manager</SelectItem>
+                    <SelectItem value="none">No Manager</SelectItem>
                     {managers.map((manager) => (
                       <SelectItem key={manager.id} value={manager.id}>
                         {manager.full_name} ({manager.staff_id})
@@ -913,14 +913,14 @@ export const UserManagement = () => {
                 <div className="space-y-2">
                   <Label htmlFor="edit-manager_id">Manager (Optional)</Label>
                   <Select 
-                    value={editingEmployee.manager_id || ''} 
-                    onValueChange={(value) => setEditingEmployee({ ...editingEmployee, manager_id: value })}
+                    value={editingEmployee.manager_id || 'none'} 
+                    onValueChange={(value) => setEditingEmployee({ ...editingEmployee, manager_id: value === 'none' ? '' : value })}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select manager (optional)" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No Manager</SelectItem>
+                      <SelectItem value="none">No Manager</SelectItem>
                       {managers.filter(m => m.id !== editingEmployee.id).map((manager) => (
                         <SelectItem key={manager.id} value={manager.id}>
                           {manager.full_name} ({manager.staff_id})
