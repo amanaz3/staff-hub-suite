@@ -80,7 +80,7 @@ const handler = async (req: Request): Promise<Response> => {
       type: 'recovery',
       email: email,
       options: {
-        redirectTo: `${req.headers.get('origin') || 'https://hr.amanacorporate.com'}/reset-password`,
+        redirectTo: `${req.headers.get('origin') || 'https://app.hrflow.ae'}/reset-password`,
       },
     });
 
