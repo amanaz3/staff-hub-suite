@@ -18,6 +18,8 @@ interface UpdateUserRequest {
   status: string;
   hire_date?: string;
   manager_id?: string;
+  deleted_at?: string;
+  deleted_by?: string;
 }
 
 serve(async (req) => {
@@ -69,7 +71,9 @@ serve(async (req) => {
       position,
       status,
       hire_date,
-      manager_id
+      manager_id,
+      deleted_at,
+      deleted_by
     }: UpdateUserRequest = await req.json();
 
     console.log('Updating user:', { employee_id, email, staff_id });
@@ -120,7 +124,7 @@ serve(async (req) => {
       throw new Error('Cannot remove your own admin role');
     }
 
-    // Prepare employee update with optional hire_date and manager_id
+    // Prepare employee update with optional hire_date, manager_id, deleted_at, and deleted_by
     const employeeUpdate: any = {
       full_name,
       email,
@@ -132,6 +136,16 @@ serve(async (req) => {
       manager_id: manager_id || null,
       updated_at: new Date().toISOString()
     };
+
+    // Handle soft delete fields
+    if (status === 'deleted') {
+      employeeUpdate.deleted_at = deleted_at || new Date().toISOString();
+      employeeUpdate.deleted_by = deleted_by || user.id;
+    } else if (deleted_at === null) {
+      // Restoring a deleted user - clear deletion fields
+      employeeUpdate.deleted_at = null;
+      employeeUpdate.deleted_by = null;
+    }
 
     // Add hire_date and auto-calculate probation_end_date if hire_date is provided
     if (hire_date) {
@@ -206,6 +220,29 @@ serve(async (req) => {
       if (emailError) {
         console.error('Error updating auth email:', emailError);
         // Don't throw - employee data is already updated
+      }
+    }
+
+    // Disable/enable auth account based on status
+    if (status === 'deleted' || status === 'inactive') {
+      // Disable auth access for deleted or inactive users
+      const { error: banError } = await supabaseAdmin.auth.admin.updateUserById(
+        userId,
+        { ban_duration: status === 'deleted' ? 'indefinite' : '876000h' } // 876000h = 100 years for inactive
+      );
+
+      if (banError) {
+        console.error('Error disabling user auth:', banError);
+      }
+    } else if (status === 'active') {
+      // Re-enable auth access for active users
+      const { error: unbanError } = await supabaseAdmin.auth.admin.updateUserById(
+        userId,
+        { ban_duration: 'none' }
+      );
+
+      if (unbanError) {
+        console.error('Error enabling user auth:', unbanError);
       }
     }
 

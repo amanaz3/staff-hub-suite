@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { UserPlus, Users, KeyRound, Loader2, Pencil, MoreVertical, UserX, UserCheck } from 'lucide-react';
+import { UserPlus, Users, KeyRound, Loader2, Pencil, MoreVertical, UserX, UserCheck, Trash2, RotateCcw, Eye, EyeOff } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -30,6 +30,8 @@ interface Employee {
   user_id?: string;
   manager_id?: string;
   manager_name?: string;
+  deleted_at?: string;
+  deleted_by?: string;
 }
 
 export const UserManagement = () => {
@@ -50,6 +52,11 @@ export const UserManagement = () => {
   const [statusToggleEmployee, setStatusToggleEmployee] = useState<Employee | null>(null);
   const [togglingStatus, setTogglingStatus] = useState(false);
   const [managers, setManagers] = useState<Employee[]>([]);
+  const [showDeletedUsers, setShowDeletedUsers] = useState(false);
+  const [deleteEmployee, setDeleteEmployee] = useState<Employee | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [restoreEmployee, setRestoreEmployee] = useState<Employee | null>(null);
+  const [restoring, setRestoring] = useState(false);
   
   // Check if user is admin using the proper role check
   const isAdmin = hasRole('admin');
@@ -105,6 +112,7 @@ export const UserManagement = () => {
           .select('id, full_name, staff_id, employee_id, department, position, status')
           .in('user_id', userIds)
           .eq('status', 'active')
+          .is('deleted_at', null)
           .order('full_name');
         
         if (managerData) {
@@ -125,13 +133,19 @@ export const UserManagement = () => {
       
       if (isAdmin) {
         // Admin gets full employee data with manager info
-        const result = await supabase
+        let query = supabase
           .from('employees')
           .select(`
             *,
             manager:employees!manager_id(full_name)
-          `)
-          .order('created_at', { ascending: false });
+          `);
+        
+        // Filter deleted users unless showDeletedUsers is true
+        if (!showDeletedUsers) {
+          query = query.is('deleted_at', null);
+        }
+        
+        const result = await query.order('created_at', { ascending: false });
         
         if (result.data) {
           data = result.data.map((emp: any) => ({
@@ -143,7 +157,7 @@ export const UserManagement = () => {
           error = result.error;
         }
       } else {
-        // Non-admin gets directory view
+        // Non-admin gets directory view (excluding deleted users)
         const result = await supabase
           .from('employee_directory')
           .select('*')
@@ -167,9 +181,9 @@ export const UserManagement = () => {
   };
 
   useEffect(() => {
-    // Fetch employees when admin status is determined
+    // Fetch employees when admin status or showDeletedUsers changes
     fetchEmployees();
-  }, [isAdmin]);
+  }, [isAdmin, showDeletedUsers]);
 
   const validateStaffId = (value: string) => {
     if (!/^\d{4}$/.test(value)) {
@@ -454,6 +468,110 @@ export const UserManagement = () => {
     }
   };
 
+  const handleDeleteUser = async () => {
+    if (!deleteEmployee) return;
+
+    setDeleting(true);
+
+    try {
+      // Fetch the user's current role
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', deleteEmployee.user_id)
+        .maybeSingle();
+
+      const currentRole = roleData?.role || 'staff';
+      
+      const { error } = await supabase.functions.invoke('update-user', {
+        body: {
+          employee_id: deleteEmployee.id,
+          full_name: deleteEmployee.full_name,
+          email: deleteEmployee.email,
+          staff_id: deleteEmployee.staff_id,
+          role: currentRole,
+          division: deleteEmployee.division || '',
+          department: deleteEmployee.department,
+          position: deleteEmployee.position,
+          status: 'deleted',
+          deleted_at: new Date().toISOString(),
+          deleted_by: profile?.user_id
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'User deleted successfully',
+      });
+
+      setDeleteEmployee(null);
+      fetchEmployees();
+    } catch (error: any) {
+      console.error('Error deleting user:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to delete user',
+        variant: 'destructive',
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleRestoreUser = async () => {
+    if (!restoreEmployee) return;
+
+    setRestoring(true);
+
+    try {
+      // Fetch the user's current role
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', restoreEmployee.user_id)
+        .maybeSingle();
+
+      const currentRole = roleData?.role || 'staff';
+      
+      const { error } = await supabase.functions.invoke('update-user', {
+        body: {
+          employee_id: restoreEmployee.id,
+          full_name: restoreEmployee.full_name,
+          email: restoreEmployee.email,
+          staff_id: restoreEmployee.staff_id,
+          role: currentRole,
+          division: restoreEmployee.division || '',
+          department: restoreEmployee.department,
+          position: restoreEmployee.position,
+          status: 'active',
+          deleted_at: null, // Clear deletion timestamp
+          deleted_by: null
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'User restored successfully',
+      });
+
+      setRestoreEmployee(null);
+      fetchEmployees();
+    } catch (error: any) {
+      console.error('Error restoring user:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to restore user',
+        variant: 'destructive',
+      });
+    } finally {
+      setRestoring(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -646,12 +764,36 @@ export const UserManagement = () => {
       {/* Users List */}
       <Card>
         <CardHeader>
-          <CardTitle>Current Users</CardTitle>
-          {!isAdmin && (
-            <p className="text-sm text-muted-foreground">
-              Directory view - Contact admin for full employee management
-            </p>
-          )}
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Current Users</CardTitle>
+              {!isAdmin && (
+                <p className="text-sm text-muted-foreground">
+                  Directory view - Contact admin for full employee management
+                </p>
+              )}
+            </div>
+            {isAdmin && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowDeletedUsers(!showDeletedUsers)}
+                className="gap-2"
+              >
+                {showDeletedUsers ? (
+                  <>
+                    <EyeOff className="h-4 w-4" />
+                    Hide Deleted
+                  </>
+                ) : (
+                  <>
+                    <Eye className="h-4 w-4" />
+                    Show Deleted
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -675,16 +817,29 @@ export const UserManagement = () => {
               </TableHeader>
               <TableBody>
                 {employees.map((employee) => (
-                <TableRow key={employee.id}>
+                <TableRow 
+                  key={employee.id}
+                  className={employee.status === 'deleted' ? 'opacity-60' : ''}
+                >
                     <TableCell className="font-mono">{employee.staff_id || 'N/A'}</TableCell>
-                    <TableCell>{employee.full_name}</TableCell>
+                    <TableCell className={employee.status === 'deleted' ? 'line-through' : ''}>
+                      {employee.full_name}
+                    </TableCell>
                     {isAdmin && <TableCell>{employee.email || 'N/A'}</TableCell>}
                     <TableCell>{employee.division || 'N/A'}</TableCell>
                     <TableCell>{employee.department}</TableCell>
                     <TableCell>{employee.position}</TableCell>
                     {isAdmin && <TableCell>{employee.manager_name || 'No Manager'}</TableCell>}
                     <TableCell>
-                      <Badge variant={employee.status === 'active' ? 'default' : 'secondary'}>
+                      <Badge 
+                        variant={
+                          employee.status === 'active' 
+                            ? 'default' 
+                            : employee.status === 'deleted' 
+                            ? 'destructive' 
+                            : 'secondary'
+                        }
+                      >
                         {employee.status}
                       </Badge>
                     </TableCell>
@@ -746,25 +901,48 @@ export const UserManagement = () => {
                                       <KeyRound className="h-4 w-4" />
                                       Reset Password
                                     </>
-                                  )}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => setStatusToggleEmployee(employee)}
-                                  className="gap-2 cursor-pointer focus:bg-accent"
-                                >
-                                  {employee.status === 'active' ? (
-                                    <>
-                                      <UserX className="h-4 w-4 text-destructive" />
-                                      <span>Deactivate User</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <UserCheck className="h-4 w-4 text-green-600" />
-                                      <span>Activate User</span>
-                                    </>
-                                  )}
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
+                                   )}
+                                 </DropdownMenuItem>
+                                 
+                                 {employee.status !== 'deleted' && (
+                                   <>
+                                     <DropdownMenuItem
+                                       onClick={() => setStatusToggleEmployee(employee)}
+                                       className="gap-2 cursor-pointer focus:bg-accent"
+                                     >
+                                       {employee.status === 'active' ? (
+                                         <>
+                                           <UserX className="h-4 w-4 text-destructive" />
+                                           <span>Deactivate User</span>
+                                         </>
+                                       ) : (
+                                         <>
+                                           <UserCheck className="h-4 w-4 text-green-600" />
+                                           <span>Activate User</span>
+                                         </>
+                                       )}
+                                     </DropdownMenuItem>
+                                     
+                                     <DropdownMenuItem
+                                       onClick={() => setDeleteEmployee(employee)}
+                                       className="gap-2 cursor-pointer focus:bg-accent text-destructive"
+                                     >
+                                       <Trash2 className="h-4 w-4" />
+                                       <span>Delete User</span>
+                                     </DropdownMenuItem>
+                                   </>
+                                 )}
+                                 
+                                 {employee.status === 'deleted' && (
+                                   <DropdownMenuItem
+                                     onClick={() => setRestoreEmployee(employee)}
+                                     className="gap-2 cursor-pointer focus:bg-accent text-green-600"
+                                   >
+                                     <RotateCcw className="h-4 w-4" />
+                                     <span>Restore User</span>
+                                   </DropdownMenuItem>
+                                 )}
+                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>
                         </TooltipProvider>
@@ -890,10 +1068,11 @@ export const UserManagement = () => {
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="inactive">Inactive</SelectItem>
-                    </SelectContent>
+                     <SelectContent>
+                       <SelectItem value="active">Active</SelectItem>
+                       <SelectItem value="inactive">Inactive</SelectItem>
+                       <SelectItem value="deleted">Deleted</SelectItem>
+                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
@@ -973,6 +1152,62 @@ export const UserManagement = () => {
             <AlertDialogCancel disabled={togglingStatus}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleToggleStatus} disabled={togglingStatus}>
               {togglingStatus ? 'Processing...' : 'Confirm'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete User Confirmation Dialog */}
+      <AlertDialog open={!!deleteEmployee} onOpenChange={() => setDeleteEmployee(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-destructive">Delete User</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>{deleteEmployee?.full_name}</strong>? 
+              <br /><br />
+              This action will:
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li>Disable their account access</li>
+                <li>Remove them from active listings</li>
+                <li>Preserve all historical data</li>
+              </ul>
+              <br />
+              You can restore this user later if needed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteUser} 
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? 'Deleting...' : 'Delete User'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Restore User Confirmation Dialog */}
+      <AlertDialog open={!!restoreEmployee} onOpenChange={() => setRestoreEmployee(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Restore User</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to restore <strong>{restoreEmployee?.full_name}</strong>? 
+              <br /><br />
+              This will:
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li>Re-enable their account access</li>
+                <li>Set their status to active</li>
+                <li>Make them visible in active listings</li>
+              </ul>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={restoring}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleRestoreUser} disabled={restoring}>
+              {restoring ? 'Restoring...' : 'Restore User'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
