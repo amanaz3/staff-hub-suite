@@ -133,12 +133,10 @@ export const UserManagement = () => {
       
       if (isAdmin) {
         // Admin gets full employee data with manager info
+        // Fetch employees first
         let query = supabase
           .from('employees')
-          .select(`
-            *,
-            manager:employees!employees_manager_id_fkey(full_name)
-          `);
+          .select('*');
         
         // Filter deleted users unless showDeletedUsers is true
         if (!showDeletedUsers) {
@@ -147,14 +145,35 @@ export const UserManagement = () => {
         
         const result = await query.order('created_at', { ascending: false });
         
-        if (result.data) {
-          data = result.data.map((emp: any) => ({
+        if (result.error) {
+          error = result.error;
+        } else {
+          const employeesData = result.data;
+          
+          // Get unique manager IDs
+          const managerIds = [...new Set(
+            employeesData
+              ?.filter(e => e.manager_id)
+              .map(e => e.manager_id)
+          )] as string[];
+
+          // Fetch manager names separately
+          let managersMap = new Map();
+          if (managerIds.length > 0) {
+            const { data: managers } = await supabase
+              .from('employees')
+              .select('id, full_name')
+              .in('id', managerIds);
+            
+            managersMap = new Map(managers?.map(m => [m.id, m.full_name]));
+          }
+
+          // Map manager names to employees
+          data = employeesData?.map(emp => ({
             ...emp,
-            manager_name: emp.manager?.full_name || null
+            manager_name: emp.manager_id ? managersMap.get(emp.manager_id) || null : null
           }));
           error = null;
-        } else {
-          error = result.error;
         }
       } else {
         // Non-admin gets directory view (excluding deleted users)
