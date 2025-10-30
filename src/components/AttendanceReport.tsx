@@ -172,6 +172,7 @@ export const AttendanceReport = () => {
             day: DAYS[getDay(currentDay)],
             clockIn: attRecord?.clock_in_time ? format(new Date(attRecord.clock_in_time), 'HH:mm') : '--:--',
             clockOut: attRecord?.clock_out_time ? format(new Date(attRecord.clock_out_time), 'HH:mm') : '--:--',
+            totalHours: attRecord?.total_hours ? attRecord.total_hours.toFixed(2) : '--',
             lateHours: lateHours > 0 ? lateHours.toFixed(2) : '0.00',
             earlyHours: earlyHours > 0 ? earlyHours.toFixed(2) : '0.00',
             pendingLeaves: pendingLeavesMap[employee.id] || 0,
@@ -217,6 +218,9 @@ export const AttendanceReport = () => {
           break;
         case 'date':
           compareValue = new Date(a.date).getTime() - new Date(b.date).getTime();
+          break;
+        case 'totalHours':
+          compareValue = parseFloat(a.totalHours || '0') - parseFloat(b.totalHours || '0');
           break;
         case 'lateHours':
           compareValue = parseFloat(a.lateHours) - parseFloat(b.lateHours);
@@ -274,6 +278,7 @@ export const AttendanceReport = () => {
       'Day',
       'Clock In',
       'Clock Out',
+      'Total Hours',
       'Late Hours',
       'Early Hours',
       'Leave Pending',
@@ -289,6 +294,7 @@ export const AttendanceReport = () => {
         row.day,
         row.clockIn,
         row.clockOut,
+        row.totalHours,
         row.lateHours,
         row.earlyHours,
         row.pendingLeaves,
@@ -451,6 +457,15 @@ export const AttendanceReport = () => {
                 <TableHead className="font-semibold">Clock Out</TableHead>
                 <TableHead 
                   className="cursor-pointer hover:bg-accent transition-colors select-none"
+                  onClick={() => handleSort('totalHours')}
+                >
+                  <div className="flex items-center whitespace-nowrap font-semibold">
+                    Total Hours
+                    {getSortIcon('totalHours')}
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer hover:bg-accent transition-colors select-none"
                   onClick={() => handleSort('lateHours')}
                 >
                   <div className="flex items-center whitespace-nowrap font-semibold">
@@ -482,13 +497,13 @@ export const AttendanceReport = () => {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center py-8">
+                  <TableCell colSpan={11} className="text-center py-8">
                     Loading attendance data...
                   </TableCell>
                 </TableRow>
               ) : filteredData.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center py-8">
+                  <TableCell colSpan={11} className="text-center py-8">
                     No attendance records found
                   </TableCell>
                 </TableRow>
@@ -501,6 +516,7 @@ export const AttendanceReport = () => {
                     <TableCell>{record.day}</TableCell>
                     <TableCell>{record.clockIn}</TableCell>
                     <TableCell>{record.clockOut}</TableCell>
+                    <TableCell className="font-medium">{record.totalHours}</TableCell>
                     <TableCell>{record.lateHours}</TableCell>
                     <TableCell>{record.earlyHours}</TableCell>
                     <TableCell className="text-center">{record.pendingLeaves}</TableCell>
