@@ -251,6 +251,7 @@ export const LeaveManagement = ({
                 recipientEmail: admin.email,
                 recipientName: admin.full_name,
                 submitterName: employeeData.full_name,
+                employeeId: employeeId,
                 details: {
                   leaveType: leaveType.name,
                   startDate: newRequest.startDate,
@@ -332,6 +333,7 @@ export const LeaveManagement = ({
               recipientEmail: leaveRequest.employee.email || '',
               recipientName: leaveRequest.employee.full_name,
               submitterName: leaveRequest.employee.full_name,
+              employeeId: leaveRequest.employee_id,
               details: {
                 leaveType: leaveRequest.leave_type?.name || 'Leave',
                 startDate: leaveRequest.start_date,

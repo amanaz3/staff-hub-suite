@@ -38,6 +38,41 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+async function getManagerOrAdminEmails(employeeId: string, supabase: any): Promise<string[]> {
+  try {
+    // First try to get the employee's manager
+    const { data: employee } = await supabase
+      .from('employees')
+      .select('manager_id, email')
+      .eq('id', employeeId)
+      .single();
+    
+    if (employee?.manager_id) {
+      // Get manager's email
+      const { data: manager } = await supabase
+        .from('employees')
+        .select('email')
+        .eq('id', employee.manager_id)
+        .single();
+      
+      if (manager?.email && manager.email !== employee.email) {
+        return [manager.email];
+      }
+    }
+    
+    // If no manager or manager has no email, get all admin emails
+    const { data: admins } = await supabase
+      .from('profiles')
+      .select('email')
+      .eq('role', 'admin');
+    
+    return admins?.map((a: any) => a.email).filter((email: string) => email && email !== employee?.email) || [];
+  } catch (error) {
+    console.error('Error fetching manager/admin emails:', error);
+    return [];
+  }
+}
+
 interface AttendanceIssue {
   type: 'late' | 'early' | 'absent' | 'incomplete_hours';
   details: {
@@ -225,12 +260,22 @@ const handler = async (req: Request): Promise<Response> => {
           notification.issues
         );
 
-        const emailResponse = await resend.emails.send({
+        // Get CC emails (manager or admin)
+        const ccEmails = await getManagerOrAdminEmails(notification.employee_id, supabase);
+
+        const emailPayload: any = {
           from: "HRFlow <noreply@amanacorporate.com>",
           to: [notification.email],
           subject: `Attendance Notice - ${new Date(targetDate).toLocaleDateString()}`,
           html: emailHtml,
-        });
+        };
+
+        // Only add cc if there are emails to CC
+        if (ccEmails.length > 0) {
+          emailPayload.cc = ccEmails;
+        }
+
+        const emailResponse = await resend.emails.send(emailPayload);
 
         console.log(`Email sent to ${notification.email}:`, emailResponse);
 

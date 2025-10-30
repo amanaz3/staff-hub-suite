@@ -253,6 +253,7 @@ export const ExceptionRequestForm = ({ attendanceId, employeeId, onSuccess }: Ex
                 recipientEmail: admin.email,
                 recipientName: admin.full_name,
                 submitterName: employeeData.full_name,
+                employeeId: employeeId,
                 details: {
                   exceptionType: exceptionType,
                   reason: reason.trim()

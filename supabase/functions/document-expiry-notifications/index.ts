@@ -8,6 +8,41 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+async function getManagerOrAdminEmails(employeeId: string, supabase: any): Promise<string[]> {
+  try {
+    // First try to get the employee's manager
+    const { data: employee } = await supabase
+      .from('employees')
+      .select('manager_id, email')
+      .eq('id', employeeId)
+      .single();
+    
+    if (employee?.manager_id) {
+      // Get manager's email
+      const { data: manager } = await supabase
+        .from('employees')
+        .select('email')
+        .eq('id', employee.manager_id)
+        .single();
+      
+      if (manager?.email && manager.email !== employee.email) {
+        return [manager.email];
+      }
+    }
+    
+    // If no manager or manager has no email, get all admin emails
+    const { data: admins } = await supabase
+      .from('profiles')
+      .select('email')
+      .eq('role', 'admin');
+    
+    return admins?.map((a: any) => a.email).filter((email: string) => email && email !== employee?.email) || [];
+  } catch (error) {
+    console.error('Error fetching manager/admin emails:', error);
+    return [];
+  }
+}
+
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -251,15 +286,25 @@ async function sendExpiryNotification(
 
   const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
 
-  // Send notification to employee email (if available)
+  // Send notification to employee email (if available) with CC to manager/admin
   if (document.employees?.email) {
     try {
-      const { data, error } = await resend.emails.send({
+      // Get CC emails (manager or admin)
+      const ccEmails = await getManagerOrAdminEmails(document.employee_id, supabase);
+
+      const employeeEmailPayload: any = {
         from: 'HRFlow <noreply@amanacorporate.com>',
         to: [document.employees.email],
         subject: subject,
         html: htmlContent,
-      });
+      };
+
+      // Only add cc if there are emails to CC
+      if (ccEmails.length > 0) {
+        employeeEmailPayload.cc = ccEmails;
+      }
+
+      const { data, error } = await resend.emails.send(employeeEmailPayload);
 
       if (error) {
         console.error(`Failed to send notification to employee ${document.employees.email}:`, error);

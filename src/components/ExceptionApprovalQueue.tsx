@@ -141,6 +141,7 @@ export const ExceptionApprovalQueue = () => {
               recipientEmail: employeeData.email,
               recipientName: employeeData.full_name,
               submitterName: employeeData.full_name,
+              employeeId: exception.employee_id,
               details: {
                 exceptionType: exception.exception_type,
                 reason: exception.reason,

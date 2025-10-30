@@ -13,6 +13,7 @@ interface EmailNotificationRequest {
   recipientEmail: string;
   recipientName: string;
   submitterName: string;
+  employeeId?: string;
   details: {
     exceptionType?: string;
     leaveType?: string;
@@ -23,6 +24,41 @@ interface EmailNotificationRequest {
     subject?: string;
     message?: string;
   };
+}
+
+async function getManagerOrAdminEmails(employeeId: string, supabase: any): Promise<string[]> {
+  try {
+    // First try to get the employee's manager
+    const { data: employee } = await supabase
+      .from('employees')
+      .select('manager_id, email')
+      .eq('id', employeeId)
+      .single();
+    
+    if (employee?.manager_id) {
+      // Get manager's email
+      const { data: manager } = await supabase
+        .from('employees')
+        .select('email')
+        .eq('id', employee.manager_id)
+        .single();
+      
+      if (manager?.email && manager.email !== employee.email) {
+        return [manager.email];
+      }
+    }
+    
+    // If no manager or manager has no email, get all admin emails
+    const { data: admins } = await supabase
+      .from('profiles')
+      .select('email')
+      .eq('role', 'admin');
+    
+    return admins?.map((a: any) => a.email).filter((email: string) => email && email !== employee?.email) || [];
+  } catch (error) {
+    console.error('Error fetching manager/admin emails:', error);
+    return [];
+  }
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -37,7 +73,7 @@ const handler = async (req: Request): Promise<Response> => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { type, action, recipientEmail, recipientName, submitterName, details }: EmailNotificationRequest = await req.json();
+    const { type, action, recipientEmail, recipientName, submitterName, employeeId, details }: EmailNotificationRequest = await req.json();
 
     // Generate email content based on type and action
     let subject = '';
@@ -100,15 +136,28 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
+    // Get CC emails (manager or admin)
+    let ccEmails: string[] = [];
+    if (employeeId) {
+      ccEmails = await getManagerOrAdminEmails(employeeId, supabase);
+    }
+
     // Send email via Resend
     const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
     
-    const { data: emailResult, error: emailError } = await resend.emails.send({
+    const emailPayload: any = {
       from: 'HRFlow <noreply@amanacorporate.com>',
       to: [recipientEmail],
       subject: subject,
       html: htmlContent,
-    });
+    };
+
+    // Only add cc if there are emails to CC
+    if (ccEmails.length > 0) {
+      emailPayload.cc = ccEmails;
+    }
+
+    const { data: emailResult, error: emailError } = await resend.emails.send(emailPayload);
 
     if (emailError) {
       console.error('Failed to send email via Resend:', emailError);
