@@ -1,6 +1,10 @@
-# Welcome to your Lovable project
+# Welcome to HRFLOW
+
+HRFLOW is a modern, comprehensive HR Management System designed to streamline employee management, attendance tracking, leave management, and document handling. Built with cutting-edge web technologies for a seamless user experience.
 
 ## Project info
+
+This project was built using [Lovable](https://lovable.dev), a rapid web application development platform.
 
 **URL**: https://lovable.dev/projects/7640bbfa-5cf3-4c00-8b0f-a8433be6bdb5
 
