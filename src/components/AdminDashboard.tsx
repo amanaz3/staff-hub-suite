@@ -34,7 +34,7 @@ export const AdminDashboard = ({ userRole }: AdminDashboardProps) => {
           </TabsTrigger>
           <TabsTrigger value="exceptions" className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4" />
-            Exceptions
+            Absences
           </TabsTrigger>
           <TabsTrigger value="attendance-report" className="flex items-center gap-2">
             <ClipboardList className="h-4 w-4" />
