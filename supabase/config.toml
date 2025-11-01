@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.annual-leave-allocation]
 verify_jwt = false
+
+[functions.weekly-exception-report]
+verify_jwt = false

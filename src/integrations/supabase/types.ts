@@ -677,6 +677,66 @@ export type Database = {
         }
         Relationships: []
       }
+      weekly_exception_report_log: {
+        Row: {
+          created_at: string | null
+          email_sent_at: string | null
+          email_status: string
+          employee_id: string
+          id: string
+          issue_summary: Json
+          issues_with_exceptions: number
+          issues_without_exceptions: number
+          report_date: string
+          total_issues: number
+          week_end_date: string
+          week_start_date: string
+        }
+        Insert: {
+          created_at?: string | null
+          email_sent_at?: string | null
+          email_status?: string
+          employee_id: string
+          id?: string
+          issue_summary: Json
+          issues_with_exceptions?: number
+          issues_without_exceptions?: number
+          report_date: string
+          total_issues?: number
+          week_end_date: string
+          week_start_date: string
+        }
+        Update: {
+          created_at?: string | null
+          email_sent_at?: string | null
+          email_status?: string
+          employee_id?: string
+          id?: string
+          issue_summary?: Json
+          issues_with_exceptions?: number
+          issues_without_exceptions?: number
+          report_date?: string
+          total_issues?: number
+          week_end_date?: string
+          week_start_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weekly_exception_report_log_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employee_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "weekly_exception_report_log_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       work_schedules: {
         Row: {
           created_at: string
