@@ -2,6 +2,9 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.55.0";
 import { Resend } from "npm:resend@2.0.0";
 
+// UAE timezone offset (UTC+4)
+const UAE_TIMEZONE_OFFSET_HOURS = 4;
+
 // Helper function to get day name from date
 function getDayName(date: Date): string {
   const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -31,6 +34,22 @@ function formatTime12Hour(date: Date): string {
   const formattedSeconds = seconds.toString().padStart(2, '0');
   
   return `${displayHours}:${formattedMinutes}:${formattedSeconds} ${period}`;
+}
+
+// Convert UTC timestamp to UAE local time
+function convertUTCToLocal(utcTimestamp: string): Date {
+  const utcDate = new Date(utcTimestamp);
+  // Add 4 hours to convert UTC to UAE time
+  const localDate = new Date(utcDate.getTime() + (UAE_TIMEZONE_OFFSET_HOURS * 60 * 60 * 1000));
+  return localDate;
+}
+
+// Parse scheduled time (stored as HH:MM:SS) into a Date object for comparison
+function parseScheduledTime(dateString: string, timeString: string): Date {
+  const [hours, minutes, seconds] = timeString.split(':').map(Number);
+  const date = new Date(dateString + 'T00:00:00Z');
+  date.setUTCHours(hours, minutes, seconds || 0, 0);
+  return date;
 }
 
 const corsHeaders = {
@@ -183,8 +202,8 @@ const handler = async (req: Request): Promise<Response> => {
         });
       } else {
         // Check for late check-in
-        const clockInTime = new Date(`${targetDate}T${attendance.clock_in_time.split('T')[1]}`);
-        const scheduledStart = new Date(`${targetDate}T${schedule.start_time}`);
+        const clockInTime = convertUTCToLocal(attendance.clock_in_time);
+        const scheduledStart = parseScheduledTime(targetDate, schedule.start_time);
         
         if (clockInTime > scheduledStart) {
           const lateHours = (clockInTime.getTime() - scheduledStart.getTime()) / (1000 * 60 * 60);
@@ -200,8 +219,8 @@ const handler = async (req: Request): Promise<Response> => {
 
         // Check for early check-out
         if (attendance.clock_out_time) {
-          const clockOutTime = new Date(`${targetDate}T${attendance.clock_out_time.split('T')[1]}`);
-          const scheduledEnd = new Date(`${targetDate}T${schedule.end_time}`);
+          const clockOutTime = convertUTCToLocal(attendance.clock_out_time);
+          const scheduledEnd = parseScheduledTime(targetDate, schedule.end_time);
           
           if (clockOutTime < scheduledEnd) {
             const earlyHours = (scheduledEnd.getTime() - clockOutTime.getTime()) / (1000 * 60 * 60);
