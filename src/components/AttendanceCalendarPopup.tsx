@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { DayPicker } from "react-day-picker";
 import { format, subMonths, addMonths, startOfMonth, endOfMonth, isAfter, isBefore, isEqual } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
-import { AttendanceDayCell } from "./AttendanceDayCell";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { AttendanceDayTooltip } from "./AttendanceDayTooltip";
 import { cn } from "@/lib/utils";
 
 interface AttendanceCalendarPopupProps {
@@ -219,7 +220,6 @@ export function AttendanceCalendarPopup({ userProfile, onClose }: AttendanceCale
       if (!attendance.clock_in_time) {
         issues.push("Missing clock-in");
       } else {
-        // Check if late (simplified - actual logic in edge function)
         const clockInTime = new Date(attendance.clock_in_time).toTimeString().split(" ")[0];
         if (clockInTime > schedule.start_time) {
           issues.push("Late arrival");
@@ -229,7 +229,6 @@ export function AttendanceCalendarPopup({ userProfile, onClose }: AttendanceCale
       if (!attendance.clock_out_time) {
         issues.push("Missing clock-out");
       } else if (attendance.clock_in_time) {
-        // Check if early departure
         const clockOutTime = new Date(attendance.clock_out_time).toTimeString().split(" ")[0];
         if (clockOutTime < schedule.end_time) {
           issues.push("Early departure");
@@ -250,13 +249,10 @@ export function AttendanceCalendarPopup({ userProfile, onClose }: AttendanceCale
       if (issues.length === 0) {
         status = "ok";
       } else if (approvedExceptions.length >= issues.length) {
-        // All issues have approved exceptions
         status = "ok";
       } else if (pendingExceptions.length > 0) {
-        // Has pending exceptions
         status = "pending-exception";
       } else {
-        // Has issues without exceptions
         status = "issues-no-exception";
       }
 
@@ -306,27 +302,60 @@ export function AttendanceCalendarPopup({ userProfile, onClose }: AttendanceCale
     return { ok, pendingException, issuesNoException, leave };
   }, [dayStatusMap]);
 
+  // Custom day renderer with tooltip
+  const DayWithTooltip = (props: any) => {
+    const { date } = props;
+    const dateStr = format(date, "yyyy-MM-dd");
+    const dayStatus = dayStatusMap.get(dateStr);
+
+    // Don't show tooltip for future or non-working days
+    if (!dayStatus || dayStatus.status === "future" || dayStatus.status === "non-working") {
+      return (
+        <button {...props} className={cn(props.className, "rdp-day_button")}>
+          {format(date, "d")}
+        </button>
+      );
+    }
+
+    return (
+      <TooltipProvider delayDuration={150}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button {...props} className={cn(props.className, "rdp-day_button")}>
+              {format(date, "d")}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="right" className="z-[100]">
+            <AttendanceDayTooltip dayStatus={dayStatus} date={date} />
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  };
+
   return (
-    <div className="p-4 w-96">
+    <div className="p-4 w-[520px]">
       {/* Header with month navigation */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-6">
         <Button
-          variant="ghost"
-          size="icon"
+          variant="outline"
+          size="sm"
           onClick={() => setSelectedMonth(subMonths(selectedMonth, 1))}
+          className="h-8 w-8 p-0"
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
 
-        <h3 className="font-semibold text-foreground">
+        <h3 className="font-semibold text-lg text-foreground">
           {format(selectedMonth, "MMMM yyyy")}
         </h3>
 
         <Button
-          variant="ghost"
-          size="icon"
+          variant="outline"
+          size="sm"
           onClick={() => setSelectedMonth(addMonths(selectedMonth, 1))}
           disabled={isAfter(selectedMonth, new Date())}
+          className="h-8 w-8 p-0"
         >
           <ChevronRight className="h-4 w-4" />
         </Button>
@@ -334,8 +363,12 @@ export function AttendanceCalendarPopup({ userProfile, onClose }: AttendanceCale
 
       {/* Calendar */}
       {loading ? (
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        <div className="flex items-center justify-center h-80">
+          <div className="space-y-4 text-center">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 mx-auto" 
+                 style={{ borderColor: "hsl(var(--primary))" }} />
+            <p className="text-sm text-muted-foreground">Loading attendance data...</p>
+          </div>
         </div>
       ) : (
         <DayPicker
@@ -344,42 +377,69 @@ export function AttendanceCalendarPopup({ userProfile, onClose }: AttendanceCale
           onMonthChange={setSelectedMonth}
           modifiers={modifiers}
           modifiersClassNames={{
-            ok: "bg-success-light text-success hover:bg-success-light/80 border border-success/20 rounded-md font-medium",
-            pendingException: "bg-warning-light text-warning hover:bg-warning-light/80 border border-warning/20 rounded-md font-medium",
-            issuesNoException: "bg-destructive-light text-destructive hover:bg-destructive-light/80 border border-destructive/20 rounded-md font-medium",
-            leave: "bg-muted text-muted-foreground hover:bg-muted/80 border border-border rounded-md",
+            ok: "ok",
+            pendingException: "pendingException",
+            issuesNoException: "issuesNoException",
+            leave: "leave",
           }}
           disabled={(date) => isAfter(date, new Date())}
-          className={cn("pointer-events-auto")}
+          className={cn("attendance-calendar pointer-events-auto")}
           components={{
-            Day: ({ date, displayMonth }: { date: Date; displayMonth: Date }) => (
-              <AttendanceDayCell date={date} displayMonth={displayMonth} dayStatusMap={dayStatusMap} />
-            ),
+            Day: DayWithTooltip,
           }}
         />
       )}
 
-      {/* Legend */}
-      <div className="mt-4 pt-4 border-t border-border space-y-2">
-        <h4 className="text-sm font-semibold text-foreground mb-2">Legend:</h4>
-        <div className="grid grid-cols-2 gap-2 text-xs">
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded bg-success-light border border-success/20" />
-            <span className="text-foreground">All OK / Approved</span>
+      {/* Enhanced Legend */}
+      <div className="mt-6 pt-4 border-t space-y-3" style={{ borderColor: "hsl(var(--border))" }}>
+        <h4 className="text-sm font-semibold text-foreground">Status Legend</h4>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-5 h-5 rounded border-2 flex items-center justify-center text-xs" 
+                 style={{
+                   backgroundColor: "hsl(var(--success-light))",
+                   borderColor: "hsl(var(--success) / 0.3)",
+                   color: "hsl(var(--success))"
+                 }}>
+              ✓
+            </div>
+            <span className="text-sm text-foreground">All OK</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded bg-warning-light border border-warning/20" />
-            <span className="text-foreground">Pending Approval</span>
+          <div className="flex items-center gap-2.5">
+            <div className="w-5 h-5 rounded border-2 flex items-center justify-center text-xs"
+                 style={{
+                   backgroundColor: "hsl(var(--warning-light))",
+                   borderColor: "hsl(var(--warning) / 0.3)"
+                 }}>
+              ⏳
+            </div>
+            <span className="text-sm text-foreground">Pending</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded bg-destructive-light border border-destructive/20" />
-            <span className="text-foreground">Issues / Absent</span>
+          <div className="flex items-center gap-2.5">
+            <div className="w-5 h-5 rounded border-2 flex items-center justify-center text-xs"
+                 style={{
+                   backgroundColor: "hsl(var(--destructive-light))",
+                   borderColor: "hsl(var(--destructive) / 0.3)",
+                   color: "hsl(var(--destructive))"
+                 }}>
+              ⚠
+            </div>
+            <span className="text-sm text-foreground">Issues</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded bg-muted border border-border" />
-            <span className="text-foreground">Approved Leave</span>
+          <div className="flex items-center gap-2.5">
+            <div className="w-5 h-5 rounded border-2 flex items-center justify-center text-xs"
+                 style={{
+                   backgroundColor: "hsl(var(--muted))",
+                   borderColor: "hsl(var(--border))"
+                 }}>
+              📅
+            </div>
+            <span className="text-sm text-foreground">Leave</span>
           </div>
         </div>
+        <p className="text-xs text-muted-foreground italic mt-2">
+          Hover over any day to see detailed information
+        </p>
       </div>
     </div>
   );
