@@ -17,13 +17,13 @@ export function AttendanceCalendarButton({ userProfile }: AttendanceCalendarButt
   // Check for pending issues in the last 7 days
   useEffect(() => {
     const checkForPendingIssues = async () => {
-      if (!userProfile?.id) return;
+      if (!userProfile?.user_id) return;
 
       try {
         const { data: employeeData } = await supabase
           .from("employees")
           .select("id")
-          .eq("user_id", userProfile.id)
+          .eq("user_id", userProfile.user_id)
           .single();
 
         if (!employeeData) return;

@@ -67,12 +67,12 @@ export function AttendanceCalendarPopup({ userProfile, onClose }: AttendanceCale
   // Fetch employee ID first
   useEffect(() => {
     const fetchEmployeeId = async () => {
-      if (!userProfile?.id) return;
+      if (!userProfile?.user_id) return;
 
       const { data } = await supabase
         .from("employees")
         .select("id")
-        .eq("user_id", userProfile.id)
+        .eq("user_id", userProfile.user_id)
         .single();
 
       if (data) {
