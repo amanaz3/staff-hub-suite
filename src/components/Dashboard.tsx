@@ -5,6 +5,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ClockInOut } from "@/components/ClockInOut";
+import { AttendanceCalendarButton } from "@/components/AttendanceCalendarButton";
 import { 
   Users, 
   UserCheck, 
@@ -69,6 +70,7 @@ export const Dashboard = ({ userRole, currentUser, userProfile, onLogout, onNavi
     lateCheckIns: 0
   });
   const [loading, setLoading] = useState(true);
+  const [employeeId, setEmployeeId] = useState<string | null>(null);
   const [employmentInfo, setEmploymentInfo] = useState<{
     hireDate: string;
     probationEndDate: string | null;
@@ -221,16 +223,17 @@ export const Dashboard = ({ userRole, currentUser, userProfile, onLogout, onNavi
       try {
         const { data, error } = await supabase
           .from('employees')
-          .select('hire_date, probation_end_date')
+          .select('id, hire_date, probation_end_date')
           .eq('user_id', userProfile.user_id)
           .single();
 
         if (error) {
           console.error('Error fetching employment info:', error);
         } else if (data) {
+          setEmployeeId(data.id);
           setEmploymentInfo({
             hireDate: data.hire_date,
-            probationEndDate: data.probation_end_date
+            probationEndDate: data.probation_end_date,
           });
         }
       } catch (error) {
@@ -277,11 +280,19 @@ export const Dashboard = ({ userRole, currentUser, userProfile, onLogout, onNavi
               </div>
             </div>
             
-            <div className="flex items-center gap-4">
-              <div className="text-right hidden sm:block">
-                <div className="font-medium text-foreground">{currentUser.name}</div>
-                <div className="text-sm text-muted-foreground">{currentUser.email}</div>
-              </div>
+        <div className="flex items-center gap-4">
+          {/* Calendar Button - Only for Staff */}
+          {userRole === 'staff' && employeeId && (
+            <AttendanceCalendarButton 
+              employeeId={employeeId}
+              employeeName={userProfile.full_name}
+            />
+          )}
+          
+          <div className="text-right hidden sm:block">
+            <div className="font-medium text-foreground">{currentUser.name}</div>
+            <div className="text-sm text-muted-foreground">{currentUser.email}</div>
+          </div>
               <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
                 <AvatarImage src={currentUser.avatar} />
                 <AvatarFallback className="bg-primary text-primary-foreground">
