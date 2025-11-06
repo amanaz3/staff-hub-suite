@@ -70,7 +70,7 @@ export function AttendanceCalendarButton({ userProfile }: AttendanceCalendarButt
       </PopoverTrigger>
 
       <PopoverContent
-        className="w-auto p-0 shadow-xl"
+        className="w-auto p-0"
         align="end"
         side="bottom"
         sideOffset={8}
