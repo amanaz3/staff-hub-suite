@@ -43,7 +43,11 @@ const COLORS = {
   breach: 'hsl(0, 84%, 40%)'
 };
 
-export const AttendanceStatsWidget = () => {
+interface AttendanceStatsWidgetProps {
+  onBreachClick?: (employeeId: string) => void;
+}
+
+export const AttendanceStatsWidget = ({ onBreachClick }: AttendanceStatsWidgetProps) => {
   const [stats, setStats] = useState<AttendanceStats | null>(null);
   const [loading, setLoading] = useState(true);
   const currentMonth = new Date();
@@ -429,16 +433,30 @@ export const AttendanceStatsWidget = () => {
               </h3>
               <div className="space-y-2">
                 {stats.employeesWithBreaches.slice(0, 5).map(emp => (
-                  <div key={emp.employee_id} className="flex items-center justify-between p-2 bg-background/50 rounded">
+                  <div 
+                    key={emp.employee_id} 
+                    className="flex items-center justify-between p-2 bg-background/50 rounded cursor-pointer hover:bg-background/80 transition-colors border border-transparent hover:border-red-300 dark:hover:border-red-800"
+                    onClick={() => onBreachClick?.(emp.employee_id)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        onBreachClick?.(emp.employee_id);
+                      }
+                    }}
+                  >
                     <div>
-                      <p className="font-medium text-foreground">{emp.employee_name}</p>
+                      <p className="font-medium text-foreground hover:text-red-600 transition-colors">
+                        {emp.employee_name}
+                      </p>
                       <p className="text-xs text-muted-foreground">
                         {emp.consecutive_absences >= 3 && `${emp.consecutive_absences} consecutive absences`}
                         {emp.consecutive_absences >= 3 && emp.total_absents > 5 && ' • '}
                         {emp.total_absents > 5 && `${emp.total_absents} total absences`}
                       </p>
                     </div>
-                    <Badge variant="destructive">
+                    <Badge variant="destructive" className="pointer-events-none">
                       {emp.total_absents} absences
                     </Badge>
                   </div>

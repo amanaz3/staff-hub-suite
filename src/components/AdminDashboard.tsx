@@ -16,6 +16,12 @@ interface AdminDashboardProps {
 
 export const AdminDashboard = ({ userRole }: AdminDashboardProps) => {
   const [activeTab, setActiveTab] = useState('leave');
+  const [selectedEmployeeForReport, setSelectedEmployeeForReport] = useState<string>('all');
+
+  const handleBreachClick = (employeeId: string) => {
+    setSelectedEmployeeForReport(employeeId);
+    setActiveTab('attendance-report');
+  };
 
   // Staff users see simplified view
   if (userRole === 'staff') {
@@ -28,7 +34,7 @@ export const AdminDashboard = ({ userRole }: AdminDashboardProps) => {
   return (
     <div className="space-y-6">
       {/* Attendance Stats Widget - Only for Admins */}
-      {isAdmin && <AttendanceStatsWidget />}
+      {isAdmin && <AttendanceStatsWidget onBreachClick={handleBreachClick} />}
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-7' : 'grid-cols-3'}`}>
@@ -75,7 +81,10 @@ export const AdminDashboard = ({ userRole }: AdminDashboardProps) => {
         </TabsContent>
 
         <TabsContent value="attendance-report" className="mt-6">
-          <AttendanceReport />
+          <AttendanceReport 
+            preselectedEmployee={selectedEmployeeForReport}
+            onEmployeeChange={setSelectedEmployeeForReport}
+          />
         </TabsContent>
 
         {isAdmin && (

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,11 +14,33 @@ import { toast } from 'sonner';
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-export const AttendanceReport = () => {
+interface AttendanceReportProps {
+  preselectedEmployee?: string;
+  onEmployeeChange?: (employeeId: string) => void;
+}
+
+export const AttendanceReport = ({ 
+  preselectedEmployee, 
+  onEmployeeChange 
+}: AttendanceReportProps = {}) => {
   const currentDate = new Date();
   const [selectedMonth, setSelectedMonth] = useState(format(currentDate, 'yyyy-MM'));
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedEmployee, setSelectedEmployee] = useState<string>('all');
+  const [selectedEmployee, setSelectedEmployee] = useState<string>(preselectedEmployee || 'all');
+
+  // Update selected employee when prop changes
+  useEffect(() => {
+    if (preselectedEmployee && preselectedEmployee !== 'all') {
+      setSelectedEmployee(preselectedEmployee);
+      // Scroll to top to show the employee filter
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [preselectedEmployee]);
+
+  const handleEmployeeChange = (value: string) => {
+    setSelectedEmployee(value);
+    onEmployeeChange?.(value);
+  };
   const [showExceptionsOnly, setShowExceptionsOnly] = useState(false);
   const [showLateOnly, setShowLateOnly] = useState(false);
   const [showEarlyOnly, setShowEarlyOnly] = useState(false);
@@ -344,8 +366,8 @@ export const AttendanceReport = () => {
           </div>
 
           <div className="w-full sm:w-64">
-            <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-              <SelectTrigger>
+            <Select value={selectedEmployee} onValueChange={handleEmployeeChange}>
+              <SelectTrigger className={selectedEmployee !== 'all' ? 'border-primary ring-2 ring-primary/20' : ''}>
                 <SelectValue placeholder="All Employees" />
               </SelectTrigger>
               <SelectContent>
