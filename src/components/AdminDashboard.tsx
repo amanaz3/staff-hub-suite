@@ -8,6 +8,7 @@ import { LeaveManagement } from './LeaveManagement';
 import { AttendanceReport } from './AttendanceReport';
 import { Clock, Shield, AlertTriangle, Calendar, FileText, ClipboardList, Bell } from 'lucide-react';
 import { AttendanceNotificationLog } from './AttendanceNotificationLog';
+import { AttendanceStatsWidget } from './AttendanceStatsWidget';
 
 interface AdminDashboardProps {
   userRole: 'admin' | 'staff' | 'manager';
@@ -26,6 +27,9 @@ export const AdminDashboard = ({ userRole }: AdminDashboardProps) => {
 
   return (
     <div className="space-y-6">
+      {/* Attendance Stats Widget - Only for Admins */}
+      {isAdmin && <AttendanceStatsWidget />}
+      
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-7' : 'grid-cols-3'}`}>
           <TabsTrigger value="leave" className="flex items-center gap-2">
