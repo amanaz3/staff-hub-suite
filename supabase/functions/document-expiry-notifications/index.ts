@@ -328,6 +328,38 @@ async function sendExpiryNotification(
           status: 'sent',
           sent_at: new Date().toISOString()
         });
+
+        // Create in-app notification
+        try {
+          // Get user_id from employee
+          const { data: employee } = await supabase
+            .from('employees')
+            .select('user_id')
+            .eq('id', document.employee_id)
+            .single();
+
+          if (employee?.user_id) {
+            await supabase.rpc('create_in_app_notification', {
+              p_user_id: employee.user_id,
+              p_employee_id: document.employee_id,
+              p_notification_type: 'document_expiry',
+              p_title: 'Document Expiry Notice',
+              p_message: `Your ${document.document_name} will expire in ${daysUntilExpiry} day${daysUntilExpiry !== 1 ? 's' : ''}. Please renew it before ${new Date(document.expiry_date).toLocaleDateString()}`,
+              p_metadata: {
+                document_id: document.id,
+                document_name: document.document_name,
+                document_type: document.document_type,
+                expiry_date: document.expiry_date,
+                days_until_expiry: daysUntilExpiry
+              },
+              p_action_url: '/',
+              p_priority: daysUntilExpiry <= 7 ? 'urgent' : daysUntilExpiry <= 30 ? 'high' : 'normal'
+            });
+            console.log(`In-app notification created for ${document.employees.email}`);
+          }
+        } catch (notifError) {
+          console.error('Failed to create in-app notification:', notifError);
+        }
       }
     } catch (error: any) {
       console.error(`Exception sending notification to employee ${document.employees.email}:`, error);

@@ -392,6 +392,66 @@ export type Database = {
           },
         ]
       }
+      in_app_notifications: {
+        Row: {
+          action_url: string | null
+          created_at: string | null
+          employee_id: string | null
+          id: string
+          message: string
+          metadata: Json | null
+          notification_type: string
+          priority: string | null
+          read: boolean | null
+          read_at: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          action_url?: string | null
+          created_at?: string | null
+          employee_id?: string | null
+          id?: string
+          message: string
+          metadata?: Json | null
+          notification_type: string
+          priority?: string | null
+          read?: boolean | null
+          read_at?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          action_url?: string | null
+          created_at?: string | null
+          employee_id?: string | null
+          id?: string
+          message?: string
+          metadata?: Json | null
+          notification_type?: string
+          priority?: string | null
+          read?: boolean | null
+          read_at?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "in_app_notifications_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employee_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "in_app_notifications_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leave_requests: {
         Row: {
           created_at: string | null
@@ -846,6 +906,19 @@ export type Database = {
           p_year: number
         }
         Returns: number
+      }
+      create_in_app_notification: {
+        Args: {
+          p_action_url?: string
+          p_employee_id: string
+          p_message: string
+          p_metadata?: Json
+          p_notification_type: string
+          p_priority?: string
+          p_title: string
+          p_user_id: string
+        }
+        Returns: string
       }
       get_employee_id_from_user: { Args: { _user_id: string }; Returns: string }
       has_role: {

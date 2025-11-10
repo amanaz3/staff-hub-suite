@@ -5,6 +5,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ClockInOut } from "@/components/ClockInOut";
+import { NotificationBell } from "@/components/NotificationBell";
 
 import { 
   Users, 
@@ -281,6 +282,7 @@ export const Dashboard = ({ userRole, currentUser, userProfile, onLogout, onNavi
             </div>
             
         <div className="flex items-center gap-4">
+          <NotificationBell />
           <div className="text-right hidden sm:block">
             <div className="font-medium text-foreground">{currentUser.name}</div>
             <div className="text-sm text-muted-foreground">{currentUser.email}</div>

@@ -298,6 +298,26 @@ const handler = async (req: Request): Promise<Response> => {
 
         console.log(`Email sent to ${notification.email}:`, emailResponse);
 
+        // Create in-app notification
+        try {
+          await supabase.rpc('create_in_app_notification', {
+            p_user_id: notification.user_id,
+            p_employee_id: notification.employee_id,
+            p_notification_type: 'attendance',
+            p_title: 'Attendance Notice',
+            p_message: `You have ${notification.issues.length} attendance issue${notification.issues.length > 1 ? 's' : ''} for ${new Date(targetDate).toLocaleDateString()}`,
+            p_metadata: {
+              attendance_date: targetDate,
+              issues: notification.issues.map(i => i.type)
+            },
+            p_action_url: '/',
+            p_priority: 'high'
+          });
+          console.log(`In-app notification created for ${notification.email}`);
+        } catch (notifError) {
+          console.error('Failed to create in-app notification:', notifError);
+        }
+
         // Log to attendance_notification_log
         const { error: logError } = await supabase
           .from('attendance_notification_log')

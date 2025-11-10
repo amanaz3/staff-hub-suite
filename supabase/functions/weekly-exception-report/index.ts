@@ -398,6 +398,37 @@ const handler = async (req: Request): Promise<Response> => {
         console.log(`Email sent to ${report.employeeEmail}:`, emailResponse);
         notificationResults.sent++;
 
+        // Create in-app notification
+        try {
+          // Get user_id from employee
+          const { data: employee } = await supabase
+            .from('employees')
+            .select('user_id')
+            .eq('id', report.employeeId)
+            .single();
+
+          if (employee?.user_id) {
+            await supabase.rpc('create_in_app_notification', {
+              p_user_id: employee.user_id,
+              p_employee_id: report.employeeId,
+              p_notification_type: 'attendance',
+              p_title: 'Weekly Attendance Summary',
+              p_message: `You have ${report.issuesWithoutExceptions} unresolved attendance issue${report.issuesWithoutExceptions !== 1 ? 's' : ''} this week that require${report.issuesWithoutExceptions === 1 ? 's' : ''} your attention`,
+              p_metadata: {
+                week_start: weekStart.toISOString().split('T')[0],
+                week_end: weekEnd.toISOString().split('T')[0],
+                total_issues: report.totalIssues,
+                issues_without_exceptions: report.issuesWithoutExceptions
+              },
+              p_action_url: '/',
+              p_priority: report.issuesWithoutExceptions > 0 ? 'high' : 'normal'
+            });
+            console.log(`In-app notification created for ${report.employeeEmail}`);
+          }
+        } catch (notifError) {
+          console.error('Failed to create in-app notification:', notifError);
+        }
+
         // Log to database
         await supabase
           .from('weekly_exception_report_log')

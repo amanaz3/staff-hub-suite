@@ -195,6 +195,78 @@ const handler = async (req: Request): Promise<Response> => {
       sent_at: new Date().toISOString()
     });
 
+    // Create in-app notification
+    if (employeeId) {
+      try {
+        // Get user_id from employee_id
+        const { data: employee } = await supabase
+          .from('employees')
+          .select('user_id')
+          .eq('id', employeeId)
+          .single();
+
+        if (employee?.user_id) {
+          let notificationTitle = '';
+          let notificationMessage = '';
+          let notificationType = '';
+          let actionUrl = '/';
+          let priority = 'normal';
+
+          if (type === 'attendance_exception') {
+            notificationType = 'exception_request';
+            if (action === 'submitted') {
+              notificationTitle = 'Exception Request Submitted';
+              notificationMessage = 'Your attendance exception request has been submitted and is pending review';
+              actionUrl = '/';
+            } else if (action === 'approved') {
+              notificationTitle = 'Exception Request Approved';
+              notificationMessage = `Your ${details.exceptionType} exception request has been approved`;
+              actionUrl = '/';
+              priority = 'high';
+            } else if (action === 'rejected') {
+              notificationTitle = 'Exception Request Rejected';
+              notificationMessage = `Your ${details.exceptionType} exception request has been rejected`;
+              actionUrl = '/';
+              priority = 'high';
+            }
+          } else if (type === 'leave_request') {
+            notificationType = 'leave_request';
+            if (action === 'submitted') {
+              notificationTitle = 'Leave Request Submitted';
+              notificationMessage = `Your ${details.leaveType} leave request has been submitted and is pending review`;
+              actionUrl = '/';
+            } else if (action === 'approved') {
+              notificationTitle = 'Leave Request Approved';
+              notificationMessage = `Your ${details.leaveType} leave request from ${details.startDate} to ${details.endDate} has been approved`;
+              actionUrl = '/';
+              priority = 'high';
+            } else if (action === 'rejected') {
+              notificationTitle = 'Leave Request Rejected';
+              notificationMessage = `Your ${details.leaveType} leave request has been rejected`;
+              actionUrl = '/';
+              priority = 'high';
+            }
+          }
+
+          if (notificationTitle) {
+            await supabase.rpc('create_in_app_notification', {
+              p_user_id: employee.user_id,
+              p_employee_id: employeeId,
+              p_notification_type: notificationType,
+              p_title: notificationTitle,
+              p_message: notificationMessage,
+              p_metadata: details,
+              p_action_url: actionUrl,
+              p_priority: priority
+            });
+            console.log(`In-app notification created for user ${employee.user_id}`);
+          }
+        }
+      } catch (notifError) {
+        console.error('Failed to create in-app notification:', notifError);
+      }
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true, 
