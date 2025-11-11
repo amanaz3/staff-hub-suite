@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { FileText, Upload, Calendar as CalendarIcon, AlertTriangle, Download, Eye } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { toGST } from '@/lib/timezone';
 
 interface Employee {
   id: string;
@@ -205,8 +206,8 @@ export const DocumentManagement = () => {
   const getExpiryStatus = (expiryDate: string | null) => {
     if (!expiryDate) return null;
     
-    const today = new Date();
-    const expiry = new Date(expiryDate);
+    const today = toGST(new Date());
+    const expiry = toGST(new Date(expiryDate));
     const daysUntilExpiry = Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
     
     if (daysUntilExpiry < 0) {

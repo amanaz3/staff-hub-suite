@@ -5,9 +5,11 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+import { nowInGST } from './timezone';
+
 export function calculateServiceDuration(hireDate: Date | string): { years: number; months: number; totalMonths: number } {
   const hire = new Date(hireDate);
-  const now = new Date();
+  const now = nowInGST(); // Use GST for calculations
   
   let years = now.getFullYear() - hire.getFullYear();
   let months = now.getMonth() - hire.getMonth();

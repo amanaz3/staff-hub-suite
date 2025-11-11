@@ -25,6 +25,8 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { calculateServiceDuration, formatServiceDuration, isProbationCompleted } from "@/lib/utils";
+import { todayInGST } from '@/lib/timezone';
+import { TimezoneIndicator } from '@/components/TimezoneIndicator';
 
 interface DashboardProps {
   userRole: 'admin' | 'staff';
@@ -77,8 +79,8 @@ export const Dashboard = ({ userRole, currentUser, userProfile, onLogout, onNavi
     probationEndDate: string | null;
   } | null>(null);
   
-  // Get today's date in YYYY-MM-DD format
-  const today = new Date().toISOString().split('T')[0];
+  // Get today's date in GST timezone
+  const today = todayInGST();
 
   // Helper function to check if clock-in is late based on work schedule
   const isLateCheckIn = (clockInTime: string, startTime: string | undefined): boolean => {
@@ -278,6 +280,7 @@ export const Dashboard = ({ userRole, currentUser, userProfile, onLogout, onNavi
                 <Badge variant="outline" className="text-sm hidden sm:inline-flex">
                   {userRole === 'admin' ? 'Administrator' : 'Staff Member'}
                 </Badge>
+                <TimezoneIndicator />
               </div>
             </div>
             

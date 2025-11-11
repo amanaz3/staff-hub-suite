@@ -11,6 +11,7 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import { Download, Search, FileText, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, getDay, isFuture, startOfDay } from 'date-fns';
 import { toast } from 'sonner';
+import { toGST, parseInGST, formatInGST } from '@/lib/timezone';
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -156,11 +157,11 @@ export const AttendanceReport = ({
           let remark = 'Absent';
 
           if (attRecord?.clock_in_time && attRecord?.clock_out_time) {
-            const clockIn = new Date(attRecord.clock_in_time);
-            const clockOut = new Date(attRecord.clock_out_time);
+            const clockIn = toGST(attRecord.clock_in_time);
+            const clockOut = toGST(attRecord.clock_out_time);
             
-            const scheduledStartTime = new Date(attRecord.date + 'T' + scheduledStart);
-            const scheduledEndTime = new Date(attRecord.date + 'T' + scheduledEnd);
+            const scheduledStartTime = parseInGST(attRecord.date, scheduledStart);
+            const scheduledEndTime = parseInGST(attRecord.date, scheduledEnd);
 
             // Calculate late hours
             if (clockIn > scheduledStartTime) {
@@ -192,8 +193,8 @@ export const AttendanceReport = ({
             employeeDbId: employee.id,
             date: dateStr,
             day: DAYS[getDay(currentDay)],
-            clockIn: attRecord?.clock_in_time ? format(new Date(attRecord.clock_in_time), 'HH:mm') : '--:--',
-            clockOut: attRecord?.clock_out_time ? format(new Date(attRecord.clock_out_time), 'HH:mm') : '--:--',
+            clockIn: attRecord?.clock_in_time ? formatInGST(attRecord.clock_in_time, 'HH:mm') : '--:--',
+            clockOut: attRecord?.clock_out_time ? formatInGST(attRecord.clock_out_time, 'HH:mm') : '--:--',
             totalHours: attRecord?.total_hours ? attRecord.total_hours.toFixed(2) : '--',
             lateHours: lateHours > 0 ? lateHours.toFixed(2) : '0.00',
             earlyHours: earlyHours > 0 ? earlyHours.toFixed(2) : '0.00',

@@ -1,27 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 import { Resend } from "npm:resend@2.0.0";
-
-// Helper function to get day name
-function getDayName(date: Date): string {
-  return date.toLocaleDateString('en-US', { weekday: 'long' });
-}
-
-// Helper function to check if a date is a working day
-function isWorkingDay(date: Date, workingDays: string[]): boolean {
-  const dayName = getDayName(date);
-  return workingDays.includes(dayName);
-}
-
-// Helper function to format time in 12-hour format
-function formatTime12Hour(date: Date): string {
-  return date.toLocaleTimeString('en-US', { 
-    hour: '2-digit', 
-    minute: '2-digit', 
-    second: '2-digit',
-    hour12: true 
-  });
-}
+import { nowInGST, getDayName, isWorkingDay, formatTime12Hour } from '../_shared/timezone.ts';
 
 // Helper function to format time from database time string
 function formatTimeString(timeStr: string): string {
@@ -132,8 +112,8 @@ const handler = async (req: Request): Promise<Response> => {
     }
     const resend = new Resend(resendApiKey);
 
-    // Calculate date range: previous Monday to Sunday
-    const today = new Date();
+    // Calculate date range: previous Monday to Sunday in GST
+    const today = nowInGST();
     const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
     
     // Calculate the most recent Sunday (end of week)

@@ -14,6 +14,7 @@ import { UserPlus, Users, KeyRound, Loader2, Pencil, MoreVertical, UserX, UserCh
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { todayInGST, nowInGSTISO } from '@/lib/timezone';
 
 interface Employee {
   id: string;
@@ -80,7 +81,7 @@ export const UserManagement = () => {
     division: '',
     department: '',
     position: '',
-    hire_date: new Date().toISOString().split('T')[0],
+    hire_date: todayInGST(),
     manager_id: ''
   });
 
@@ -326,7 +327,7 @@ export const UserManagement = () => {
         division: '',
         department: '',
         position: '',
-        hire_date: new Date().toISOString().split('T')[0],
+        hire_date: todayInGST(),
         manager_id: ''
       });
       setStaffIdError('');
@@ -513,7 +514,7 @@ export const UserManagement = () => {
           department: deleteEmployee.department,
           position: deleteEmployee.position,
           status: 'deleted',
-          deleted_at: new Date().toISOString(),
+          deleted_at: nowInGSTISO(),
           deleted_by: profile?.user_id
         }
       });

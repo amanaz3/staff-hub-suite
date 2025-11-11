@@ -1,57 +1,9 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.55.0";
 import { Resend } from "npm:resend@2.0.0";
+import { nowInGST, toGST, yesterdayInGST, formatTime12Hour, parseScheduledTime, getDayName, isWorkingDay } from '../_shared/timezone.ts';
 
-// UAE timezone offset (UTC+4)
-const UAE_TIMEZONE_OFFSET_HOURS = 4;
-
-// Helper function to get day name from date
-function getDayName(date: Date): string {
-  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  return days[date.getDay()];
-}
-
-// Helper function to check if a date is a working day
-function isWorkingDay(date: Date, workingDays: string[]): boolean {
-  if (!workingDays || workingDays.length === 0) {
-    // Default: All days except Sunday
-    return date.getDay() !== 0;
-  }
-  const dayName = getDayName(date);
-  return workingDays.includes(dayName);
-}
-
-// Helper function to format time in 12-hour format
-function formatTime12Hour(date: Date): string {
-  const hours = date.getHours();
-  const minutes = date.getMinutes();
-  const seconds = date.getSeconds();
-  
-  const period = hours >= 12 ? 'PM' : 'AM';
-  const displayHours = hours % 12 || 12; // Convert 0 to 12 for midnight
-  
-  const formattedMinutes = minutes.toString().padStart(2, '0');
-  const formattedSeconds = seconds.toString().padStart(2, '0');
-  
-  return `${displayHours}:${formattedMinutes}:${formattedSeconds} ${period}`;
-}
-
-// Convert UTC timestamp to UAE local time
-function convertUTCToLocal(utcTimestamp: string): Date {
-  const utcDate = new Date(utcTimestamp);
-  // Add 4 hours to convert UTC to UAE time
-  const localDate = new Date(utcDate.getTime() + (UAE_TIMEZONE_OFFSET_HOURS * 60 * 60 * 1000));
-  return localDate;
-}
-
-// Parse scheduled time (stored as HH:MM:SS) into a Date object for comparison
-function parseScheduledTime(dateString: string, timeString: string): Date {
-  const [hours, minutes, seconds] = timeString.split(':').map(Number);
-  const date = new Date(dateString + 'T00:00:00Z');
-  date.setUTCHours(hours, minutes, seconds || 0, 0);
-  return date;
-}
-
+// CORS headers
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -126,12 +78,10 @@ const handler = async (req: Request): Promise<Response> => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const resend = new Resend(resendApiKey);
 
-    // Get yesterday's date
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const targetDate = yesterday.toISOString().split('T')[0];
+    // Get yesterday's date in GST
+    const targetDate = yesterdayInGST();
 
-    console.log(`Processing attendance notifications for ${targetDate}`);
+    console.log(`Processing attendance notifications for ${targetDate} (GST)`);
 
     // Fetch all active employees with their work schedules
     const { data: employees, error: empError } = await supabase
@@ -185,7 +135,7 @@ const handler = async (req: Request): Promise<Response> => {
       }
 
       // Check if yesterday was a working day for this employee
-      const yesterdayDate = new Date(targetDate + "T00:00:00Z");
+      const yesterdayDate = toGST(new Date(targetDate + "T00:00:00Z"));
       if (!isWorkingDay(yesterdayDate, schedule.working_days || [])) {
         console.log(`Skipping ${employee.full_name} - ${getDayName(yesterdayDate)} is not a working day`);
         continue;
@@ -202,7 +152,7 @@ const handler = async (req: Request): Promise<Response> => {
         });
       } else {
         // Check for late check-in
-        const clockInTime = convertUTCToLocal(attendance.clock_in_time);
+        const clockInTime = toGST(attendance.clock_in_time);
         const scheduledStart = parseScheduledTime(targetDate, schedule.start_time);
         
         if (clockInTime > scheduledStart) {
@@ -219,7 +169,7 @@ const handler = async (req: Request): Promise<Response> => {
 
         // Check for early check-out
         if (attendance.clock_out_time) {
-          const clockOutTime = convertUTCToLocal(attendance.clock_out_time);
+          const clockOutTime = toGST(attendance.clock_out_time);
           const scheduledEnd = parseScheduledTime(targetDate, schedule.end_time);
           
           if (clockOutTime < scheduledEnd) {

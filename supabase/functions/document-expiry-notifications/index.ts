@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from 'npm:resend@4.0.0';
+import { todayInGST, toGST } from '../_shared/timezone.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -58,7 +59,8 @@ const handler = async (req: Request): Promise<Response> => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const today = new Date();
+    // Calculate dates in GST
+    const today = toGST(new Date());
     const in7Days = new Date(today.getTime() + (7 * 24 * 60 * 60 * 1000));
     const in30Days = new Date(today.getTime() + (30 * 24 * 60 * 60 * 1000));
     const in90Days = new Date(today.getTime() + (90 * 24 * 60 * 60 * 1000));

@@ -13,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { AlertTriangle, Upload, X, CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { fromGST } from '@/lib/timezone';
 
 interface ExceptionRequestFormProps {
   attendanceId?: string;
@@ -180,14 +181,16 @@ export const ExceptionRequestForm = ({ attendanceId, employeeId, onSuccess }: Ex
       if (targetDate) {
         if (proposedClockIn) {
           const [hours, minutes] = proposedClockIn.split(':');
-          proposedInTime = new Date(targetDate);
-          proposedInTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+          const gstTime = new Date(targetDate);
+          gstTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+          proposedInTime = fromGST(gstTime); // Convert GST to UTC for storage
         }
 
         if (proposedClockOut) {
           const [hours, minutes] = proposedClockOut.split(':');
-          proposedOutTime = new Date(targetDate);
-          proposedOutTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+          const gstTime = new Date(targetDate);
+          gstTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+          proposedOutTime = fromGST(gstTime); // Convert GST to UTC for storage
         }
       }
 

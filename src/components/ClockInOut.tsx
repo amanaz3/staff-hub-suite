@@ -6,6 +6,7 @@ import { LogIn, LogOut, Clock, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { todayInGST, nowInGSTISO, formatInGST } from '@/lib/timezone';
 
 interface ClockInOutProps {
   userProfile: {
@@ -42,8 +43,8 @@ export const ClockInOut = ({ userProfile }: ClockInOutProps) => {
   const [employeeId, setEmployeeId] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Get today's date in YYYY-MM-DD format
-  const today = new Date().toISOString().split('T')[0];
+  // Get today's date in GST timezone
+  const today = todayInGST();
 
   // Fetch employee record and today's attendance
   useEffect(() => {
@@ -140,7 +141,7 @@ export const ClockInOut = ({ userProfile }: ClockInOutProps) => {
     
     setActionLoading(true);
     try {
-      const now = new Date().toISOString();
+      const now = nowInGSTISO();
       
       // Get user's current IP (in production, this would be server-side)
       const response = await fetch('https://api.ipify.org?format=json');
@@ -178,7 +179,7 @@ export const ClockInOut = ({ userProfile }: ClockInOutProps) => {
 
       toast({
         title: "Clocked In",
-        description: `Successfully clocked in at ${format(new Date(now), 'HH:mm')}`,
+        description: `Successfully clocked in at ${formatInGST(now, 'HH:mm')} GST`,
       });
     } catch (error) {
       console.error('Error clocking in:', error);
@@ -207,7 +208,7 @@ export const ClockInOut = ({ userProfile }: ClockInOutProps) => {
     
     setActionLoading(true);
     try {
-      const now = new Date().toISOString();
+      const now = nowInGSTISO();
       
       const { error } = await supabase
         .from('attendance')
@@ -235,7 +236,7 @@ export const ClockInOut = ({ userProfile }: ClockInOutProps) => {
 
       toast({
         title: "Clocked Out",
-        description: `Successfully clocked out at ${format(new Date(now), 'HH:mm')}`,
+        description: `Successfully clocked out at ${formatInGST(now, 'HH:mm')} GST`,
       });
     } catch (error) {
       console.error('Error clocking out:', error);
@@ -261,7 +262,7 @@ export const ClockInOut = ({ userProfile }: ClockInOutProps) => {
         return {
           text: 'Clocked in',
           badge: 'bg-status-present text-white',
-          description: `Clocked in at ${state.clockInTime ? format(new Date(state.clockInTime), 'HH:mm') : ''}`
+          description: `Clocked in at ${state.clockInTime ? formatInGST(state.clockInTime, 'HH:mm') : ''} GST`
         };
       case 'clocked-out':
         return {
@@ -310,13 +311,13 @@ export const ClockInOut = ({ userProfile }: ClockInOutProps) => {
                 {state.clockInTime && (
                   <div className="flex items-center gap-1">
                     <LogIn className="h-4 w-4" />
-                    In: {format(new Date(state.clockInTime), 'HH:mm')}
+                    In: {formatInGST(state.clockInTime, 'HH:mm')} GST
                   </div>
                 )}
                 {state.clockOutTime && (
                   <div className="flex items-center gap-1">
                     <LogOut className="h-4 w-4" />
-                    Out: {format(new Date(state.clockOutTime), 'HH:mm')}
+                    Out: {formatInGST(state.clockOutTime, 'HH:mm')} GST
                   </div>
                 )}
                 {state.totalHours && (
