@@ -155,9 +155,16 @@ export const ExceptionApprovalQueue = () => {
         // Don't fail the whole operation if email fails
       }
 
-      // Only run attendance correction for time-based exceptions
-      const timeBasedTypes = ['missed_clock_in', 'missed_clock_out', 'wrong_time'];
-      if (status === 'approved' && timeBasedTypes.includes(exception.exception_type)) {
+      // Run attendance correction for time-based and WFH exceptions
+      const attendanceAffectingTypes = [
+        'missed_clock_in', 
+        'missed_clock_out', 
+        'wrong_time',
+        'wfh',
+        'short_permission_personal',
+        'short_permission_official'
+      ];
+      if (status === 'approved' && attendanceAffectingTypes.includes(exception.exception_type)) {
         await handleAttendanceCorrection(exception);
       }
 
@@ -201,12 +208,25 @@ export const ExceptionApprovalQueue = () => {
         // Update existing attendance record
         const updates: any = {};
         
+        // Handle WFH exception
+        if (exception.exception_type === 'wfh') {
+          updates.is_wfh = true;
+          updates.status = 'present';
+          updates.notes = `WFH approved: ${exception.reason}`;
+        }
+        
+        // Handle time-based exceptions
         if (exception.proposed_clock_in_time) {
           updates.clock_in_time = exception.proposed_clock_in_time;
         }
-        
         if (exception.proposed_clock_out_time) {
           updates.clock_out_time = exception.proposed_clock_out_time;
+        }
+        
+        // Handle permission exceptions
+        if (exception.exception_type === 'short_permission_personal' || 
+            exception.exception_type === 'short_permission_official') {
+          updates.notes = `${exception.exception_type}: ${exception.reason}`;
         }
 
         if (Object.keys(updates).length > 0) {
@@ -219,16 +239,29 @@ export const ExceptionApprovalQueue = () => {
         }
       } else {
         // Create new attendance record
+        const insertData: any = {
+          employee_id: exception.employee_id,
+          date: targetDate,
+          status: 'present',
+          notes: `Created via exception approval: ${exception.reason}`
+        };
+        
+        // WFH specific
+        if (exception.exception_type === 'wfh') {
+          insertData.is_wfh = true;
+        }
+        
+        // Time-based exceptions
+        if (exception.proposed_clock_in_time) {
+          insertData.clock_in_time = exception.proposed_clock_in_time;
+        }
+        if (exception.proposed_clock_out_time) {
+          insertData.clock_out_time = exception.proposed_clock_out_time;
+        }
+
         const { error } = await supabase
           .from('attendance')
-          .insert({
-            employee_id: exception.employee_id,
-            date: targetDate,
-            clock_in_time: exception.proposed_clock_in_time,
-            clock_out_time: exception.proposed_clock_out_time,
-            status: 'present',
-            notes: `Created via exception approval: ${exception.reason}`
-          });
+          .insert(insertData);
 
         if (error) throw error;
       }

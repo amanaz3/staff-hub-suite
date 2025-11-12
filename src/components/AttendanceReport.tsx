@@ -92,10 +92,10 @@ export const AttendanceReport = ({
 
       if (empError) throw empError;
 
-      // Fetch attendance records
+      // Fetch attendance records (including is_wfh flag)
       const { data: attendance, error: attError } = await supabase
         .from('attendance')
-        .select('*')
+        .select('*, is_wfh')
         .gte('date', startDate)
         .lte('date', endDate)
         .order('date', { ascending: false });
@@ -156,7 +156,10 @@ export const AttendanceReport = ({
           let earlyHours = 0;
           let remark = 'Absent';
 
-          if (attRecord?.clock_in_time && attRecord?.clock_out_time) {
+          // Check for WFH first
+          if (attRecord?.is_wfh) {
+            remark = 'WFH';
+          } else if (attRecord?.clock_in_time && attRecord?.clock_out_time) {
             const clockIn = toGST(attRecord.clock_in_time);
             const clockOut = toGST(attRecord.clock_out_time);
             
@@ -338,6 +341,7 @@ export const AttendanceReport = ({
 
   const getRemarkVariant = (remark: string) => {
     if (remark === 'On Time') return 'approved';
+    if (remark === 'WFH') return 'approved';
     if (remark === 'Late' || remark === 'Late & Early') return 'rejected';
     if (remark === 'Early') return 'pending';
     return 'rejected';
