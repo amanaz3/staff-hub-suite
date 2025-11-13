@@ -563,6 +563,25 @@ export const ClockInOutTest = ({ employeeId: initialEmployeeId }: { employeeId?:
               </div>
             )}
             
+            {/* Clear Button */}
+            <div className="flex justify-end">
+              <Button
+                onClick={() => {
+                  setTestResult(null);
+                  setClientLogs([]);
+                  toast({
+                    title: "Results Cleared",
+                    description: "Test results have been reset",
+                  });
+                }}
+                variant="outline"
+                size="sm"
+              >
+                <XCircle className="h-4 w-4 mr-2" />
+                Clear Results
+              </Button>
+            </div>
+            
             {/* Summary */}
             <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
               <div className="flex items-center gap-2">
