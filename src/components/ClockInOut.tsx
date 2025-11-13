@@ -147,27 +147,50 @@ export const ClockInOut = ({ userProfile }: ClockInOutProps) => {
       const response = await fetch('https://api.ipify.org?format=json');
       const { ip } = await response.json();
       
-      const { error } = await supabase
+      // Check if attendance record exists for today
+      const { data: existingRecord } = await supabase
         .from('attendance')
-        .insert({
-          employee_id: employeeId,
-          date: today,
-          clock_in_time: now,
-          status: 'present',
-          ip_address: ip
-        });
+        .select('id, clock_in_time, clock_out_time')
+        .eq('employee_id', employeeId)
+        .eq('date', today)
+        .maybeSingle();
 
-      if (error) {
-        if (error.code === '23505') { // Unique constraint violation
+      if (existingRecord) {
+        // If already clocked in and not clocked out, show error
+        if (existingRecord.clock_in_time && !existingRecord.clock_out_time) {
           toast({
             title: "Already Clocked In",
             description: "You have already clocked in today",
             variant: "destructive"
           });
-        } else {
-          throw error;
+          return;
         }
-        return;
+        
+        // If clocked out, allow re-clock-in by updating the record
+        const { error } = await supabase
+          .from('attendance')
+          .update({
+            clock_in_time: now,
+            clock_out_time: null,
+            total_hours: null,
+            ip_address: ip
+          })
+          .eq('id', existingRecord.id);
+
+        if (error) throw error;
+      } else {
+        // No record exists, insert new one
+        const { error } = await supabase
+          .from('attendance')
+          .insert({
+            employee_id: employeeId,
+            date: today,
+            clock_in_time: now,
+            status: 'present',
+            ip_address: ip
+          });
+
+        if (error) throw error;
       }
 
       // Refetch attendance data to ensure UI shows actual database state
