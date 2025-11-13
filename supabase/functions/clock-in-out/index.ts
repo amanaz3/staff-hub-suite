@@ -16,6 +16,8 @@ interface ClockInOutRequest {
   action: 'clock-in' | 'clock-out';
   employee_id: string;
   date: string;
+  user_agent?: string;
+  tested_by?: string;
 }
 
 Deno.serve(async (req) => {
@@ -102,7 +104,7 @@ Deno.serve(async (req) => {
       // Check if already clocked in today
       const checkStart = Date.now();
       const { data: existing, error: checkError } = await supabase
-        .from('attendance')
+        .from('attendance_test_records')
         .select('id, clock_in_time')
         .eq('employee_id', requestBody.employee_id)
         .eq('date', requestBody.date)
@@ -127,13 +129,19 @@ Deno.serve(async (req) => {
       // Insert clock-in record
       const insertStart = Date.now();
       const { data: attendance, error: insertError } = await supabase
-        .from('attendance')
+        .from('attendance_test_records')
         .insert({
           employee_id: requestBody.employee_id,
           date: requestBody.date,
           clock_in_time: now,
           status: 'present',
           ip_address: clientIp,
+          tested_by: requestBody.tested_by || null,
+          test_metadata: {
+            user_agent: requestBody.user_agent,
+            test_type: 'clock-in',
+            timestamp: now,
+          },
         })
         .select()
         .single();
@@ -180,7 +188,7 @@ Deno.serve(async (req) => {
       // Get existing attendance record
       const fetchStart = Date.now();
       const { data: existing, error: fetchError } = await supabase
-        .from('attendance')
+        .from('attendance_test_records')
         .select('id, clock_in_time, clock_out_time')
         .eq('employee_id', requestBody.employee_id)
         .eq('date', requestBody.date)
@@ -218,7 +226,7 @@ Deno.serve(async (req) => {
       // Update with clock-out time
       const updateStart = Date.now();
       const { data: updated, error: updateError } = await supabase
-        .from('attendance')
+        .from('attendance_test_records')
         .update({
           clock_out_time: now,
           total_hours: totalHours,

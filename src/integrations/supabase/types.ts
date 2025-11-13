@@ -212,6 +212,75 @@ export type Database = {
           },
         ]
       }
+      attendance_test_records: {
+        Row: {
+          break_duration_minutes: number | null
+          clock_in_time: string | null
+          clock_out_time: string | null
+          created_at: string | null
+          date: string
+          employee_id: string | null
+          id: string
+          ip_address: unknown
+          is_wfh: boolean
+          notes: string | null
+          status: string
+          test_metadata: Json | null
+          tested_by: string | null
+          total_hours: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          break_duration_minutes?: number | null
+          clock_in_time?: string | null
+          clock_out_time?: string | null
+          created_at?: string | null
+          date: string
+          employee_id?: string | null
+          id?: string
+          ip_address?: unknown
+          is_wfh?: boolean
+          notes?: string | null
+          status?: string
+          test_metadata?: Json | null
+          tested_by?: string | null
+          total_hours?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          break_duration_minutes?: number | null
+          clock_in_time?: string | null
+          clock_out_time?: string | null
+          created_at?: string | null
+          date?: string
+          employee_id?: string | null
+          id?: string
+          ip_address?: unknown
+          is_wfh?: boolean
+          notes?: string | null
+          status?: string
+          test_metadata?: Json | null
+          tested_by?: string | null
+          total_hours?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_test_records_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employee_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_test_records_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       divisions: {
         Row: {
           created_at: string | null

@@ -39,8 +39,20 @@ export const ClockInOutTest = ({ employeeId: initialEmployeeId }: { employeeId?:
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>(initialEmployeeId || "");
   const [loadingEmployees, setLoadingEmployees] = useState(true);
   const [clientLogs, setClientLogs] = useState<LogEntry[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const { toast } = useToast();
   const today = todayInGST();
+
+  // Get current user ID
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setCurrentUserId(user.id);
+      }
+    };
+    getCurrentUser();
+  }, []);
 
   // Add client-side log
   const addClientLog = (step: string, data?: any, error?: string, startTime?: number) => {
@@ -116,6 +128,8 @@ export const ClockInOutTest = ({ employeeId: initialEmployeeId }: { employeeId?:
         action,
         employee_id: selectedEmployeeId,
         date: today,
+        tested_by: currentUserId,
+        user_agent: navigator.userAgent,
       };
       addClientLog('REQUEST_PREPARED', { body: requestBody }, undefined, prepStartTime);
 
