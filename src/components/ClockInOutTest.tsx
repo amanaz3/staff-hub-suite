@@ -270,6 +270,11 @@ export const ClockInOutTest = ({ employeeId: initialEmployeeId }: { employeeId?:
           <PlayCircle className="h-5 w-5" />
           Clock-In/Out Test Suite
         </CardTitle>
+        <div className="mt-2 p-2 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+          <p className="text-xs text-amber-800 dark:text-amber-200">
+            ℹ️ Test records are stored in an isolated table and won't affect production attendance, reports, analytics, or notifications.
+          </p>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Employee Selection (if no initial employee provided) */}
