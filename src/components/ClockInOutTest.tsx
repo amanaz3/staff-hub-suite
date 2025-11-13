@@ -43,6 +43,7 @@ export const ClockInOutTest = ({ employeeId: initialEmployeeId }: { employeeId?:
   const [clientLogs, setClientLogs] = useState<LogEntry[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [demoMode, setDemoMode] = useState(true);
+  const [showCurlCommands, setShowCurlCommands] = useState(false);
   const { toast } = useToast();
   const today = todayInGST();
 
@@ -697,16 +698,27 @@ export const ClockInOutTest = ({ employeeId: initialEmployeeId }: { employeeId?:
           </div>
         )}
 
-        {/* cURL Examples */}
+        {/* cURL Commands - Show on demand */}
         {selectedEmployeeId && (
-          <div className="space-y-3 p-3 bg-muted/50 rounded-lg border">
-            <p className="font-medium text-sm">📋 Equivalent cURL Commands:</p>
-            
-            {/* Clock-In cURL */}
-            <div className="space-y-2">
-              <p className="text-xs text-muted-foreground font-medium">Clock-In:</p>
-              <div className="relative">
-                <pre className="text-xs bg-background p-3 rounded border overflow-x-auto">
+          <div className="space-y-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowCurlCommands(!showCurlCommands)}
+              className="w-full"
+            >
+              {showCurlCommands ? "Hide" : "Show"} cURL Commands
+            </Button>
+
+            {showCurlCommands && (
+              <div className="space-y-3 p-3 bg-muted/50 rounded-lg border">
+                <p className="font-medium text-sm">📋 Equivalent cURL Commands:</p>
+                
+                {/* Clock-In cURL */}
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground font-medium">Clock-In:</p>
+                  <div className="relative">
+                    <pre className="text-xs bg-background p-3 rounded border overflow-x-auto">
 {`curl -X POST \\
   'https://ixblicchtdnqzeyrfqhi.supabase.co/functions/v1/clock-in-out' \\
   -H 'Authorization: Bearer YOUR_JWT_TOKEN' \\
@@ -719,26 +731,26 @@ export const ClockInOutTest = ({ employeeId: initialEmployeeId }: { employeeId?:
     "tested_by": "YOUR_USER_ID",
     "user_agent": "curl/8.0.0"
   }'`}
-                </pre>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="absolute top-2 right-2"
-                  onClick={() => {
-                    navigator.clipboard.writeText(`curl -X POST 'https://ixblicchtdnqzeyrfqhi.supabase.co/functions/v1/clock-in-out' -H 'Authorization: Bearer YOUR_JWT_TOKEN' -H 'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml4YmxpY2NodGRucXpleXJmcWhpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwNjY0NjEsImV4cCI6MjA3MDY0MjQ2MX0.f_jbenbSLsGXBWObVpK9WZX5ASyBKqOwMJBXBDuEhbA' -H 'Content-Type: application/json' -d '{"action":"clock-in","employee_id":"${selectedEmployeeId}","date":"${today}","tested_by":"YOUR_USER_ID","user_agent":"curl/8.0.0"}'`);
-                    toast({ title: "Copied!", description: "Clock-in cURL command copied to clipboard" });
-                  }}
-                >
-                  Copy
-                </Button>
-              </div>
-            </div>
+                    </pre>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="absolute top-2 right-2"
+                      onClick={() => {
+                        navigator.clipboard.writeText(`curl -X POST 'https://ixblicchtdnqzeyrfqhi.supabase.co/functions/v1/clock-in-out' -H 'Authorization: Bearer YOUR_JWT_TOKEN' -H 'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml4YmxpY2NodGRucXpleXJmcWhpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwNjY0NjEsImV4cCI6MjA3MDY0MjQ2MX0.f_jbenbSLsGXBWObVpK9WZX5ASyBKqOwMJBXBDuEhbA' -H 'Content-Type: application/json' -d '{"action":"clock-in","employee_id":"${selectedEmployeeId}","date":"${today}","tested_by":"YOUR_USER_ID","user_agent":"curl/8.0.0"}'`);
+                        toast({ title: "Copied!", description: "Clock-in cURL command copied to clipboard" });
+                      }}
+                    >
+                      Copy
+                    </Button>
+                  </div>
+                </div>
 
-            {/* Clock-Out cURL */}
-            <div className="space-y-2">
-              <p className="text-xs text-muted-foreground font-medium">Clock-Out:</p>
-              <div className="relative">
-                <pre className="text-xs bg-background p-3 rounded border overflow-x-auto">
+                {/* Clock-Out cURL */}
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground font-medium">Clock-Out:</p>
+                  <div className="relative">
+                    <pre className="text-xs bg-background p-3 rounded border overflow-x-auto">
 {`curl -X POST \\
   'https://ixblicchtdnqzeyrfqhi.supabase.co/functions/v1/clock-in-out' \\
   -H 'Authorization: Bearer YOUR_JWT_TOKEN' \\
@@ -751,24 +763,26 @@ export const ClockInOutTest = ({ employeeId: initialEmployeeId }: { employeeId?:
     "tested_by": "YOUR_USER_ID",
     "user_agent": "curl/8.0.0"
   }'`}
-                </pre>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="absolute top-2 right-2"
-                  onClick={() => {
-                    navigator.clipboard.writeText(`curl -X POST 'https://ixblicchtdnqzeyrfqhi.supabase.co/functions/v1/clock-in-out' -H 'Authorization: Bearer YOUR_JWT_TOKEN' -H 'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml4YmxpY2NodGRucXpleXJmcWhpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwNjY0NjEsImV4cCI6MjA3MDY0MjQ2MX0.f_jbenbSLsGXBWObVpK9WZX5ASyBKqOwMJBXBDuEhbA' -H 'Content-Type: application/json' -d '{"action":"clock-out","employee_id":"${selectedEmployeeId}","date":"${today}","tested_by":"YOUR_USER_ID","user_agent":"curl/8.0.0"}'`);
-                    toast({ title: "Copied!", description: "Clock-out cURL command copied to clipboard" });
-                  }}
-                >
-                  Copy
-                </Button>
-              </div>
-            </div>
+                    </pre>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="absolute top-2 right-2"
+                      onClick={() => {
+                        navigator.clipboard.writeText(`curl -X POST 'https://ixblicchtdnqzeyrfqhi.supabase.co/functions/v1/clock-in-out' -H 'Authorization: Bearer YOUR_JWT_TOKEN' -H 'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml4YmxpY2NodGRucXpleXJmcWhpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwNjY0NjEsImV4cCI6MjA3MDY0MjQ2MX0.f_jbenbSLsGXBWObVpK9WZX5ASyBKqOwMJBXBDuEhbA' -H 'Content-Type: application/json' -d '{"action":"clock-out","employee_id":"${selectedEmployeeId}","date":"${today}","tested_by":"YOUR_USER_ID","user_agent":"curl/8.0.0"}'`);
+                        toast({ title: "Copied!", description: "Clock-out cURL command copied to clipboard" });
+                      }}
+                    >
+                      Copy
+                    </Button>
+                  </div>
+                </div>
 
-            <p className="text-xs text-muted-foreground">
-              💡 Replace <code className="bg-background px-1 rounded">YOUR_JWT_TOKEN</code> with your actual JWT from browser DevTools → Application → Local Storage → supabase.auth.token
-            </p>
+                <p className="text-xs text-muted-foreground">
+                  💡 Replace <code className="bg-background px-1 rounded">YOUR_JWT_TOKEN</code> with your actual JWT from browser DevTools → Application → Local Storage → supabase.auth.token
+                </p>
+              </div>
+            )}
           </div>
         )}
 
