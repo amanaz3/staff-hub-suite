@@ -8,6 +8,8 @@ import { useToast } from "@/hooks/use-toast";
 import { todayInGST } from '@/lib/timezone';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 interface LogEntry {
   timestamp: string;
@@ -40,13 +42,16 @@ export const ClockInOutTest = ({ employeeId: initialEmployeeId }: { employeeId?:
   const [loadingEmployees, setLoadingEmployees] = useState(true);
   const [clientLogs, setClientLogs] = useState<LogEntry[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [demoMode, setDemoMode] = useState(true);
   const { toast } = useToast();
   const today = todayInGST();
 
-  // Load demo data on mount
+  // Load demo data on mount only if demo mode is on
   useEffect(() => {
-    loadDemoData();
-  }, []);
+    if (demoMode) {
+      loadDemoData();
+    }
+  }, [demoMode]);
 
   const loadDemoData = () => {
     const demoLogs: LogEntry[] = [
@@ -464,6 +469,29 @@ export const ClockInOutTest = ({ employeeId: initialEmployeeId }: { employeeId?:
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Demo Mode Toggle */}
+        <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border">
+          <div className="space-y-0.5">
+            <Label htmlFor="demo-mode" className="text-sm font-medium">
+              Demo Mode
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              {demoMode ? "Viewing sample test results" : "Ready for real testing"}
+            </p>
+          </div>
+          <Switch
+            id="demo-mode"
+            checked={demoMode}
+            onCheckedChange={(checked) => {
+              setDemoMode(checked);
+              if (!checked) {
+                setTestResult(null);
+                setClientLogs([]);
+              }
+            }}
+          />
+        </div>
+
         {/* Employee Selection (if no initial employee provided) */}
         {!initialEmployeeId && (
           <div className="space-y-2">
@@ -491,7 +519,7 @@ export const ClockInOutTest = ({ employeeId: initialEmployeeId }: { employeeId?:
         <div className="flex gap-3">
           <Button
             onClick={() => runTest('clock-in')}
-            disabled={testing || !selectedEmployeeId}
+            disabled={testing || !selectedEmployeeId || demoMode}
             className="flex-1"
           >
             {testing ? (
@@ -503,7 +531,7 @@ export const ClockInOutTest = ({ employeeId: initialEmployeeId }: { employeeId?:
           </Button>
           <Button
             onClick={() => runTest('clock-out')}
-            disabled={testing || !selectedEmployeeId}
+            disabled={testing || !selectedEmployeeId || demoMode}
             variant="secondary"
             className="flex-1"
           >
@@ -516,9 +544,25 @@ export const ClockInOutTest = ({ employeeId: initialEmployeeId }: { employeeId?:
           </Button>
         </div>
 
+        {/* Demo Mode Info */}
+        {demoMode && (
+          <div className="p-2 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded text-xs text-blue-800 dark:text-blue-200">
+            ℹ️ Demo mode is active. Turn off demo mode above to run real tests.
+          </div>
+        )}
+
         {/* Test Results */}
         {testResult && (
           <div className="space-y-3">
+            {/* Demo Data Badge */}
+            {demoMode && (
+              <div className="flex items-center justify-center">
+                <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/20">
+                  📊 Demo Data - Sample Test Results
+                </Badge>
+              </div>
+            )}
+            
             {/* Summary */}
             <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
               <div className="flex items-center gap-2">
@@ -639,6 +683,7 @@ export const ClockInOutTest = ({ employeeId: initialEmployeeId }: { employeeId?:
           <div className="text-sm text-muted-foreground p-3 bg-muted/50 rounded-lg">
             <p className="font-medium mb-1">Test Features:</p>
             <ul className="list-disc list-inside space-y-1">
+              <li>Toggle demo mode to view sample results or run real tests</li>
               <li>Browser-side operation logging</li>
               <li>Network performance metrics</li>
               <li>Backend execution trace</li>
