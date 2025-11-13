@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { todayInGST } from '@/lib/timezone';
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface LogEntry {
   timestamp: string;
@@ -24,13 +25,46 @@ interface TestResult {
   total_duration_ms?: number;
 }
 
-export const ClockInOutTest = ({ employeeId }: { employeeId: string }) => {
+export const ClockInOutTest = ({ employeeId: initialEmployeeId }: { employeeId?: string }) => {
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<TestResult | null>(null);
+  const [employees, setEmployees] = useState<{ id: string; full_name: string; email: string }[]>([]);
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>(initialEmployeeId || "");
+  const [loadingEmployees, setLoadingEmployees] = useState(true);
   const { toast } = useToast();
   const today = todayInGST();
 
+  // Fetch employees for admin selection
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      const { data, error } = await supabase
+        .from('employees')
+        .select('id, full_name, email')
+        .eq('status', 'active')
+        .order('full_name');
+
+      if (!error && data) {
+        setEmployees(data);
+        if (!initialEmployeeId && data.length > 0) {
+          setSelectedEmployeeId(data[0].id);
+        }
+      }
+      setLoadingEmployees(false);
+    };
+
+    fetchEmployees();
+  }, [initialEmployeeId]);
+
   const runTest = async (action: 'clock-in' | 'clock-out') => {
+    if (!selectedEmployeeId) {
+      toast({
+        title: "No Employee Selected",
+        description: "Please select an employee to test",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setTesting(true);
     setTestResult(null);
     
@@ -45,7 +79,7 @@ export const ClockInOutTest = ({ employeeId }: { employeeId: string }) => {
       const { data, error } = await supabase.functions.invoke('clock-in-out', {
         body: {
           action,
-          employee_id: employeeId,
+          employee_id: selectedEmployeeId,
           date: today,
         },
       });
@@ -113,11 +147,34 @@ export const ClockInOutTest = ({ employeeId }: { employeeId: string }) => {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Employee Selection (if no initial employee provided) */}
+        {!initialEmployeeId && (
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Select Employee to Test</label>
+            <Select
+              value={selectedEmployeeId}
+              onValueChange={setSelectedEmployeeId}
+              disabled={loadingEmployees || testing}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Choose an employee..." />
+              </SelectTrigger>
+              <SelectContent>
+                {employees.map((emp) => (
+                  <SelectItem key={emp.id} value={emp.id}>
+                    {emp.full_name} ({emp.email})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
         {/* Test Controls */}
         <div className="flex gap-3">
           <Button
             onClick={() => runTest('clock-in')}
-            disabled={testing}
+            disabled={testing || !selectedEmployeeId}
             className="flex-1"
           >
             {testing ? (
@@ -129,7 +186,7 @@ export const ClockInOutTest = ({ employeeId }: { employeeId: string }) => {
           </Button>
           <Button
             onClick={() => runTest('clock-out')}
-            disabled={testing}
+            disabled={testing || !selectedEmployeeId}
             variant="secondary"
             className="flex-1"
           >

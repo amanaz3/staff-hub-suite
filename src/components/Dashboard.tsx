@@ -312,9 +312,6 @@ export const Dashboard = ({ userRole, currentUser, userProfile, onLogout, onNavi
           <>
             <div className="mb-6 space-y-6">
               <ClockInOut userProfile={userProfile} />
-              {employeeId && (
-                <ClockInOutTest employeeId={employeeId} />
-              )}
             </div>
 
             {/* Employment Information Card */}
@@ -416,6 +413,13 @@ export const Dashboard = ({ userRole, currentUser, userProfile, onLogout, onNavi
               </div>
             )}
           </>
+        )}
+
+        {/* Clock-In/Out Test Suite (Admin only) */}
+        {userRole === 'admin' && (
+          <div className="mb-8">
+            <ClockInOutTest />
+          </div>
         )}
 
         {/* Dashboard Stats (Admin only) */}
