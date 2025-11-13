@@ -697,6 +697,81 @@ export const ClockInOutTest = ({ employeeId: initialEmployeeId }: { employeeId?:
           </div>
         )}
 
+        {/* cURL Examples */}
+        {selectedEmployeeId && (
+          <div className="space-y-3 p-3 bg-muted/50 rounded-lg border">
+            <p className="font-medium text-sm">📋 Equivalent cURL Commands:</p>
+            
+            {/* Clock-In cURL */}
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground font-medium">Clock-In:</p>
+              <div className="relative">
+                <pre className="text-xs bg-background p-3 rounded border overflow-x-auto">
+{`curl -X POST \\
+  'https://ixblicchtdnqzeyrfqhi.supabase.co/functions/v1/clock-in-out' \\
+  -H 'Authorization: Bearer YOUR_JWT_TOKEN' \\
+  -H 'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml4YmxpY2NodGRucXpleXJmcWhpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwNjY0NjEsImV4cCI6MjA3MDY0MjQ2MX0.f_jbenbSLsGXBWObVpK9WZX5ASyBKqOwMJBXBDuEhbA' \\
+  -H 'Content-Type: application/json' \\
+  -d '{
+    "action": "clock-in",
+    "employee_id": "${selectedEmployeeId}",
+    "date": "${today}",
+    "tested_by": "YOUR_USER_ID",
+    "user_agent": "curl/8.0.0"
+  }'`}
+                </pre>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="absolute top-2 right-2"
+                  onClick={() => {
+                    navigator.clipboard.writeText(`curl -X POST 'https://ixblicchtdnqzeyrfqhi.supabase.co/functions/v1/clock-in-out' -H 'Authorization: Bearer YOUR_JWT_TOKEN' -H 'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml4YmxpY2NodGRucXpleXJmcWhpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwNjY0NjEsImV4cCI6MjA3MDY0MjQ2MX0.f_jbenbSLsGXBWObVpK9WZX5ASyBKqOwMJBXBDuEhbA' -H 'Content-Type: application/json' -d '{"action":"clock-in","employee_id":"${selectedEmployeeId}","date":"${today}","tested_by":"YOUR_USER_ID","user_agent":"curl/8.0.0"}'`);
+                    toast({ title: "Copied!", description: "Clock-in cURL command copied to clipboard" });
+                  }}
+                >
+                  Copy
+                </Button>
+              </div>
+            </div>
+
+            {/* Clock-Out cURL */}
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground font-medium">Clock-Out:</p>
+              <div className="relative">
+                <pre className="text-xs bg-background p-3 rounded border overflow-x-auto">
+{`curl -X POST \\
+  'https://ixblicchtdnqzeyrfqhi.supabase.co/functions/v1/clock-in-out' \\
+  -H 'Authorization: Bearer YOUR_JWT_TOKEN' \\
+  -H 'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml4YmxpY2NodGRucXpleXJmcWhpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwNjY0NjEsImV4cCI6MjA3MDY0MjQ2MX0.f_jbenbSLsGXBWObVpK9WZX5ASyBKqOwMJBXBDuEhbA' \\
+  -H 'Content-Type: application/json' \\
+  -d '{
+    "action": "clock-out",
+    "employee_id": "${selectedEmployeeId}",
+    "date": "${today}",
+    "tested_by": "YOUR_USER_ID",
+    "user_agent": "curl/8.0.0"
+  }'`}
+                </pre>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="absolute top-2 right-2"
+                  onClick={() => {
+                    navigator.clipboard.writeText(`curl -X POST 'https://ixblicchtdnqzeyrfqhi.supabase.co/functions/v1/clock-in-out' -H 'Authorization: Bearer YOUR_JWT_TOKEN' -H 'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml4YmxpY2NodGRucXpleXJmcWhpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwNjY0NjEsImV4cCI6MjA3MDY0MjQ2MX0.f_jbenbSLsGXBWObVpK9WZX5ASyBKqOwMJBXBDuEhbA' -H 'Content-Type: application/json' -d '{"action":"clock-out","employee_id":"${selectedEmployeeId}","date":"${today}","tested_by":"YOUR_USER_ID","user_agent":"curl/8.0.0"}'`);
+                    toast({ title: "Copied!", description: "Clock-out cURL command copied to clipboard" });
+                  }}
+                >
+                  Copy
+                </Button>
+              </div>
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              💡 Replace <code className="bg-background px-1 rounded">YOUR_JWT_TOKEN</code> with your actual JWT from browser DevTools → Application → Local Storage → supabase.auth.token
+            </p>
+          </div>
+        )}
+
         {/* Instructions */}
         {!testResult && !testing && (
           <div className="text-sm text-muted-foreground p-3 bg-muted/50 rounded-lg">
