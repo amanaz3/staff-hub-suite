@@ -5,9 +5,10 @@ import { AdminDashboard } from "@/components/AdminDashboard";
 import { LeaveManagement } from "@/components/LeaveManagement";
 import { Navigation, Breadcrumb } from "@/components/ui/navigation";
 import { Button } from "@/components/ui/button";
-import { Users, Calendar, Settings, BarChart, Menu, X, RefreshCw, FileText, ClipboardList } from "lucide-react";
+import { Users, Calendar, Settings, BarChart, Menu, X, RefreshCw, FileText, ClipboardList, FlaskConical } from "lucide-react";
 import { AdminEmails } from "@/pages/AdminEmails";
 import { AdminUsers } from "@/pages/AdminUsers";
+import { ClockInOutTestPage } from "@/pages/ClockInOutTestPage";
 import { DocumentManagement } from "@/components/DocumentManagement";
 import { AttendanceReport } from "@/components/AttendanceReport";
 import { useAuth } from "@/hooks/useAuth";
@@ -60,6 +61,7 @@ const Index = () => {
     ] : []),
     ...(profile?.role === 'admin' ? [
       { id: 'users', label: 'User Management', icon: Users },
+      { id: 'clock-test', label: 'Clock-In/Out Test', icon: FlaskConical },
       { id: 'emails', label: 'Test Emails', icon: Settings }
     ] : [])
   ];
@@ -229,6 +231,10 @@ const Index = () => {
             <div className="container mx-auto px-4 sm:px-6 py-8">
               <AdminUsers />
             </div>
+          )}
+
+          {activeTab === 'clock-test' && (
+            <ClockInOutTestPage />
           )}
 
           {activeTab === 'emails' && (

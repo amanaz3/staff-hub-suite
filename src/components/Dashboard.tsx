@@ -5,7 +5,6 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ClockInOut } from "@/components/ClockInOut";
-import { ClockInOutTest } from "@/components/ClockInOutTest";
 import { NotificationBell } from "@/components/NotificationBell";
 
 import { 
@@ -413,13 +412,6 @@ export const Dashboard = ({ userRole, currentUser, userProfile, onLogout, onNavi
               </div>
             )}
           </>
-        )}
-
-        {/* Clock-In/Out Test Suite (Admin only) */}
-        {userRole === 'admin' && (
-          <div className="mb-8">
-            <ClockInOutTest />
-          </div>
         )}
 
         {/* Dashboard Stats (Admin only) */}
