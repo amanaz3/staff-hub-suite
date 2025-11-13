@@ -5,6 +5,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ClockInOut } from "@/components/ClockInOut";
+import { ClockInOutTest } from "@/components/ClockInOutTest";
 import { NotificationBell } from "@/components/NotificationBell";
 
 import { 
@@ -309,8 +310,11 @@ export const Dashboard = ({ userRole, currentUser, userProfile, onLogout, onNavi
         {/* Clock In/Out for Staff */}
         {userRole === 'staff' && (
           <>
-            <div className="mb-6">
+            <div className="mb-6 space-y-6">
               <ClockInOut userProfile={userProfile} />
+              {employeeId && (
+                <ClockInOutTest employeeId={employeeId} />
+              )}
             </div>
 
             {/* Employment Information Card */}

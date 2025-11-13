@@ -1,5 +1,8 @@
 project_id = "ixblicchtdnqzeyrfqhi"
 
+[functions.clock-in-out]
+verify_jwt = true
+
 [functions.daily-attendance-notifications]
 verify_jwt = false
 
