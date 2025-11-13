@@ -296,12 +296,28 @@ export const ClockInOutTest = ({ employeeId: initialEmployeeId }: { employeeId?:
     setTesting(true);
     setTestResult(null);
     setClientLogs([]);
+    const localClientLogs: LogEntry[] = [];
+    
+    const addLocalLog = (step: string, data?: any, error?: string, startTime?: number) => {
+      const log: LogEntry = {
+        timestamp: new Date().toISOString(),
+        step,
+        duration: startTime ? Date.now() - startTime : undefined,
+        data,
+        error,
+        source: 'client',
+      };
+      localClientLogs.push(log);
+      setClientLogs(prev => [...prev, log]);
+      console.log(`[CLIENT] ${step}`, data || error);
+      return log;
+    };
     
     try {
       const overallStartTime = Date.now();
       
       // Log test initiation
-      addClientLog('TEST_INITIATED', { 
+      addLocalLog('TEST_INITIATED', { 
         action, 
         employee_id: selectedEmployeeId,
         date: today,
@@ -324,11 +340,11 @@ export const ClockInOutTest = ({ employeeId: initialEmployeeId }: { employeeId?:
         tested_by: currentUserId,
         user_agent: navigator.userAgent,
       };
-      addClientLog('REQUEST_PREPARED', { body: requestBody }, undefined, prepStartTime);
+      addLocalLog('REQUEST_PREPARED', { body: requestBody }, undefined, prepStartTime);
 
       // Log network request start
       const networkStartTime = Date.now();
-      addClientLog('NETWORK_REQUEST_STARTED', { 
+      addLocalLog('NETWORK_REQUEST_STARTED', { 
         endpoint: 'clock-in-out',
         method: 'POST'
       });
@@ -342,7 +358,7 @@ export const ClockInOutTest = ({ employeeId: initialEmployeeId }: { employeeId?:
       const networkDuration = networkEndTime - networkStartTime;
 
       // Log network response
-      addClientLog('NETWORK_RESPONSE_RECEIVED', { 
+      addLocalLog('NETWORK_RESPONSE_RECEIVED', { 
         duration: networkDuration,
         status: error ? 'error' : 'success',
         response_size: JSON.stringify(data || error).length + ' bytes'
@@ -351,7 +367,7 @@ export const ClockInOutTest = ({ employeeId: initialEmployeeId }: { employeeId?:
       const totalClientDuration = Date.now() - overallStartTime;
 
       if (error) {
-        addClientLog('CLIENT_ERROR_HANDLED', { 
+        addLocalLog('CLIENT_ERROR_HANDLED', { 
           error: error.message,
           error_code: error.code 
         });
@@ -359,9 +375,9 @@ export const ClockInOutTest = ({ employeeId: initialEmployeeId }: { employeeId?:
         setTestResult({
           success: false,
           error: error.message,
-          logs: [],
+          logs: localClientLogs,
           total_duration_ms: totalClientDuration,
-          client_logs: clientLogs,
+          client_logs: localClientLogs,
           network_info: {
             request_time: networkStartTime - overallStartTime,
             response_time: networkDuration,
@@ -376,7 +392,7 @@ export const ClockInOutTest = ({ employeeId: initialEmployeeId }: { employeeId?:
         });
       } else {
         // Log successful response processing
-        addClientLog('RESPONSE_PARSED', { 
+        addLocalLog('RESPONSE_PARSED', { 
           success: data.success,
           server_duration: data.total_duration_ms,
           server_logs_count: data.logs?.length || 0
@@ -384,7 +400,7 @@ export const ClockInOutTest = ({ employeeId: initialEmployeeId }: { employeeId?:
 
         // Calculate latency overhead
         const latencyOverhead = totalClientDuration - (data.total_duration_ms || 0);
-        addClientLog('TEST_COMPLETED', { 
+        addLocalLog('TEST_COMPLETED', { 
           total_client_duration: totalClientDuration,
           server_duration: data.total_duration_ms,
           network_latency: latencyOverhead,
@@ -393,13 +409,13 @@ export const ClockInOutTest = ({ employeeId: initialEmployeeId }: { employeeId?:
 
         // Merge client and server logs
         const mergedLogs = [
-          ...clientLogs.map(log => ({ ...log, source: 'client' as const })),
+          ...localClientLogs.map(log => ({ ...log, source: 'client' as const })),
           ...(data.logs || []).map((log: any) => ({ ...log, source: 'server' as const }))
         ].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
         setTestResult({
           ...data,
-          client_logs: clientLogs,
+          client_logs: localClientLogs,
           logs: mergedLogs,
           network_info: {
             request_time: networkStartTime - overallStartTime,
@@ -417,13 +433,24 @@ export const ClockInOutTest = ({ employeeId: initialEmployeeId }: { employeeId?:
         });
       }
     } catch (err: any) {
-      addClientLog('UNEXPECTED_CLIENT_ERROR', { error: err.message, stack: err.stack });
+      localClientLogs.push({
+        timestamp: new Date().toISOString(),
+        step: 'UNEXPECTED_CLIENT_ERROR',
+        data: { error: err.message, stack: err.stack },
+        source: 'client'
+      });
+      setClientLogs(prev => [...prev, {
+        timestamp: new Date().toISOString(),
+        step: 'UNEXPECTED_CLIENT_ERROR',
+        data: { error: err.message, stack: err.stack },
+        source: 'client'
+      }]);
       
       setTestResult({
         success: false,
         error: err.message,
-        logs: [],
-        client_logs: clientLogs,
+        logs: localClientLogs,
+        client_logs: localClientLogs,
       });
       
       toast({
