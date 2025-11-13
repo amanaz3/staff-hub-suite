@@ -47,85 +47,85 @@ export const ClockInOut = ({ userProfile }: ClockInOutProps) => {
   const today = todayInGST();
 
   // Fetch employee record and today's attendance
-  useEffect(() => {
-    const fetchAttendanceData = async () => {
-      try {
-        // First, get the employee record for the current user
-        const { data: employee, error: employeeError } = await supabase
-          .from('employees')
-          .select('id')
-          .eq('user_id', userProfile.user_id)
-          .maybeSingle();
+  const fetchAttendanceData = async () => {
+    try {
+      // First, get the employee record for the current user
+      const { data: employee, error: employeeError } = await supabase
+        .from('employees')
+        .select('id')
+        .eq('user_id', userProfile.user_id)
+        .maybeSingle();
 
-        if (employeeError) {
-          console.error('Error fetching employee:', employeeError);
-          toast({
-            title: "Error",
-            description: "Failed to fetch employee data",
-            variant: "destructive"
-          });
-          return;
-        }
-
-        if (!employee) {
-          toast({
-            title: "Error", 
-            description: "Employee record not found. Please contact admin.",
-            variant: "destructive"
-          });
-          return;
-        }
-
-        setEmployeeId(employee.id);
-
-        // Then get today's attendance record
-        const { data: attendance, error: attendanceError } = await supabase
-          .from('attendance')
-          .select('id, clock_in_time, clock_out_time, total_hours, status')
-          .eq('employee_id', employee.id)
-          .eq('date', today)
-          .maybeSingle();
-
-        if (attendanceError) {
-          console.error('Error fetching attendance:', attendanceError);
-          toast({
-            title: "Error",
-            description: "Failed to fetch attendance data",
-            variant: "destructive"
-          });
-          return;
-        }
-
-        if (attendance) {
-          const hasClockIn = attendance.clock_in_time !== null;
-          const hasClockOut = attendance.clock_out_time !== null;
-          
-          setState({
-            status: hasClockOut ? 'clocked-out' : hasClockIn ? 'clocked-in' : 'not-clocked-in',
-            clockInTime: attendance.clock_in_time,
-            clockOutTime: attendance.clock_out_time,
-            totalHours: attendance.total_hours
-          });
-        } else {
-          setState({
-            status: 'not-clocked-in',
-            clockInTime: null,
-            clockOutTime: null,
-            totalHours: null
-          });
-        }
-      } catch (error) {
-        console.error('Error in fetchAttendanceData:', error);
+      if (employeeError) {
+        console.error('Error fetching employee:', employeeError);
         toast({
           title: "Error",
-          description: "An unexpected error occurred",
+          description: "Failed to fetch employee data",
           variant: "destructive"
         });
-      } finally {
-        setLoading(false);
+        return;
       }
-    };
 
+      if (!employee) {
+        toast({
+          title: "Error", 
+          description: "Employee record not found. Please contact admin.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      setEmployeeId(employee.id);
+
+      // Then get today's attendance record
+      const { data: attendance, error: attendanceError } = await supabase
+        .from('attendance')
+        .select('id, clock_in_time, clock_out_time, total_hours, status')
+        .eq('employee_id', employee.id)
+        .eq('date', today)
+        .maybeSingle();
+
+      if (attendanceError) {
+        console.error('Error fetching attendance:', attendanceError);
+        toast({
+          title: "Error",
+          description: "Failed to fetch attendance data",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (attendance) {
+        const hasClockIn = attendance.clock_in_time !== null;
+        const hasClockOut = attendance.clock_out_time !== null;
+        
+        setState({
+          status: hasClockOut ? 'clocked-out' : hasClockIn ? 'clocked-in' : 'not-clocked-in',
+          clockInTime: attendance.clock_in_time,
+          clockOutTime: attendance.clock_out_time,
+          totalHours: attendance.total_hours
+        });
+      } else {
+        setState({
+          status: 'not-clocked-in',
+          clockInTime: null,
+          clockOutTime: null,
+          totalHours: null
+        });
+      }
+    } catch (error) {
+      console.error('Error in fetchAttendanceData:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchAttendanceData();
   }, [userProfile.user_id, today, toast]);
 
@@ -170,12 +170,8 @@ export const ClockInOut = ({ userProfile }: ClockInOutProps) => {
         return;
       }
 
-      setState({
-        status: 'clocked-in',
-        clockInTime: now,
-        clockOutTime: null,
-        totalHours: null
-      });
+      // Refetch attendance data to ensure UI shows actual database state
+      await fetchAttendanceData();
 
       toast({
         title: "Clocked In",
@@ -222,17 +218,8 @@ export const ClockInOut = ({ userProfile }: ClockInOutProps) => {
         throw error;
       }
 
-      // Calculate total hours
-      const clockInTime = new Date(state.clockInTime!);
-      const clockOutTime = new Date(now);
-      const totalHours = (clockOutTime.getTime() - clockInTime.getTime()) / (1000 * 60 * 60);
-
-      setState({
-        status: 'clocked-out',
-        clockInTime: state.clockInTime,
-        clockOutTime: now,
-        totalHours: totalHours
-      });
+      // Refetch attendance data to ensure UI shows actual database state
+      await fetchAttendanceData();
 
       toast({
         title: "Clocked Out",
