@@ -43,6 +43,193 @@ export const ClockInOutTest = ({ employeeId: initialEmployeeId }: { employeeId?:
   const { toast } = useToast();
   const today = todayInGST();
 
+  // Load demo data on mount
+  useEffect(() => {
+    loadDemoData();
+  }, []);
+
+  const loadDemoData = () => {
+    const demoLogs: LogEntry[] = [
+      {
+        timestamp: new Date().toISOString(),
+        step: 'TEST_INITIATED',
+        duration: 2,
+        data: {
+          action: 'clock-in',
+          employee_id: 'demo-employee-123',
+          date: today,
+          user_agent: navigator.userAgent,
+          online: true,
+          connection: '4g'
+        },
+        source: 'client'
+      },
+      {
+        timestamp: new Date(Date.now() + 5).toISOString(),
+        step: 'REQUEST_PREPARED',
+        duration: 5,
+        data: {
+          body: {
+            action: 'clock-in',
+            employee_id: 'demo-employee-123',
+            date: today,
+            tested_by: 'admin-user-456',
+            user_agent: navigator.userAgent
+          }
+        },
+        source: 'client'
+      },
+      {
+        timestamp: new Date(Date.now() + 8).toISOString(),
+        step: 'NETWORK_REQUEST_STARTED',
+        duration: 8,
+        data: {
+          endpoint: 'clock-in-out',
+          method: 'POST'
+        },
+        source: 'client'
+      },
+      {
+        timestamp: new Date(Date.now() + 10).toISOString(),
+        step: 'REQUEST_RECEIVED',
+        duration: 15,
+        data: {
+          method: 'POST',
+          url: 'https://example.supabase.co/functions/v1/clock-in-out'
+        },
+        source: 'server'
+      },
+      {
+        timestamp: new Date(Date.now() + 12).toISOString(),
+        step: 'REQUEST_PARSED',
+        duration: 18,
+        data: {
+          action: 'clock-in',
+          employee_id: 'demo-employee-123'
+        },
+        source: 'server'
+      },
+      {
+        timestamp: new Date(Date.now() + 14).toISOString(),
+        step: 'VALIDATION_PASSED',
+        duration: 20,
+        source: 'server'
+      },
+      {
+        timestamp: new Date(Date.now() + 16).toISOString(),
+        step: 'IP_DETECTED',
+        duration: 22,
+        data: {
+          ip: '192.168.1.100'
+        },
+        source: 'server'
+      },
+      {
+        timestamp: new Date(Date.now() + 18).toISOString(),
+        step: 'SUPABASE_CLIENT_INITIALIZED',
+        duration: 25,
+        source: 'server'
+      },
+      {
+        timestamp: new Date(Date.now() + 25).toISOString(),
+        step: 'EMPLOYEE_LOOKUP_COMPLETE',
+        duration: 42,
+        data: {
+          found: true,
+          duration: 17
+        },
+        source: 'server'
+      },
+      {
+        timestamp: new Date(Date.now() + 30).toISOString(),
+        step: 'CLOCK_IN_OPERATION_STARTED',
+        duration: 45,
+        source: 'server'
+      },
+      {
+        timestamp: new Date(Date.now() + 45).toISOString(),
+        step: 'EXISTING_ATTENDANCE_CHECK',
+        duration: 68,
+        data: {
+          exists: false,
+          duration: 23
+        },
+        source: 'server'
+      },
+      {
+        timestamp: new Date(Date.now() + 70).toISOString(),
+        step: 'CLOCK_IN_DB_INSERT',
+        duration: 105,
+        data: {
+          success: true,
+          duration: 37,
+          attendance_id: 'attendance-test-789'
+        },
+        source: 'server'
+      },
+      {
+        timestamp: new Date(Date.now() + 108).toISOString(),
+        step: 'CLOCK_IN_COMPLETED',
+        duration: 110,
+        data: {
+          total_duration: 110,
+          clock_in_time: new Date().toISOString()
+        },
+        source: 'server'
+      },
+      {
+        timestamp: new Date(Date.now() + 135).toISOString(),
+        step: 'NETWORK_RESPONSE_RECEIVED',
+        duration: 135,
+        data: {
+          duration: 127,
+          status: 'success',
+          response_size: '1024 bytes'
+        },
+        source: 'client'
+      },
+      {
+        timestamp: new Date(Date.now() + 140).toISOString(),
+        step: 'RESPONSE_PARSED',
+        duration: 140,
+        data: {
+          success: true,
+          server_duration: 110,
+          server_logs_count: 9
+        },
+        source: 'client'
+      },
+      {
+        timestamp: new Date(Date.now() + 145).toISOString(),
+        step: 'TEST_COMPLETED',
+        duration: 145,
+        data: {
+          total_client_duration: 145,
+          server_duration: 110,
+          network_latency: 35,
+          latency_percentage: '24.14%'
+        },
+        source: 'client'
+      }
+    ];
+
+    setTestResult({
+      success: true,
+      data: {
+        attendance_id: 'attendance-test-789',
+        clock_in_time: new Date().toISOString(),
+        employee_name: 'Demo Employee'
+      },
+      logs: demoLogs,
+      total_duration_ms: 145,
+      network_info: {
+        request_time: 8,
+        response_time: 127,
+        total_network_time: 127
+      }
+    });
+  };
+
   // Get current user ID
   useEffect(() => {
     const getCurrentUser = async () => {
