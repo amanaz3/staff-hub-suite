@@ -6,9 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Download, Calendar } from 'lucide-react';
-import { format, parse, isWeekend } from 'date-fns';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { Download, Calendar, CalendarDays } from 'lucide-react';
+import { format, parse, isWeekend, addDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek, subDays, subMonths } from 'date-fns';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 interface AttendanceRecord {
   employee_id: string;
@@ -35,12 +38,77 @@ export const TeamAttendanceReport = () => {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [startDate, setStartDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [isStartDateOpen, setIsStartDateOpen] = useState(false);
+  const [isEndDateOpen, setIsEndDateOpen] = useState(false);
 
   useEffect(() => {
     fetchAttendanceData();
   }, [startDate, endDate]);
 
+  const applyPresetRange = (preset: string) => {
+    const today = new Date();
+    let newStart: Date;
+    let newEnd: Date;
+    
+    switch (preset) {
+      case 'today':
+        newStart = today;
+        newEnd = today;
+        break;
+      case 'yesterday':
+        newStart = subDays(today, 1);
+        newEnd = subDays(today, 1);
+        break;
+      case 'last7days':
+        newStart = subDays(today, 6);
+        newEnd = today;
+        break;
+      case 'last30days':
+        newStart = subDays(today, 29);
+        newEnd = today;
+        break;
+      case 'thisMonth':
+        newStart = startOfMonth(today);
+        newEnd = endOfMonth(today);
+        break;
+      case 'lastMonth':
+        const lastMonth = subMonths(today, 1);
+        newStart = startOfMonth(lastMonth);
+        newEnd = endOfMonth(lastMonth);
+        break;
+      case 'thisWeek':
+        newStart = startOfWeek(today);
+        newEnd = endOfWeek(today);
+        break;
+      default:
+        return;
+    }
+    
+    setStartDate(format(newStart, 'yyyy-MM-dd'));
+    setEndDate(format(newEnd, 'yyyy-MM-dd'));
+  };
+
+  const validateDateRange = () => {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    if (end < start) {
+      toast.error('End date must be after start date');
+      return false;
+    }
+    
+    const daysDiff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+    if (daysDiff > 365) {
+      toast.error('Date range cannot exceed 365 days');
+      return false;
+    }
+    
+    return true;
+  };
+
   const fetchAttendanceData = async () => {
+    if (!validateDateRange()) return;
+    
     try {
       setLoading(true);
 
@@ -275,29 +343,135 @@ export const TeamAttendanceReport = () => {
               Export CSV
             </Button>
           </div>
-          <div className="flex items-center gap-4 mt-4">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-              <label className="text-sm font-medium">From:</label>
-              <Input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-40"
-              />
+          <div className="space-y-4 mt-4">
+            {/* Preset Range Buttons */}
+            <div className="flex flex-wrap gap-2">
+              <Button 
+                onClick={() => applyPresetRange('today')} 
+                variant="outline" 
+                size="sm"
+              >
+                Today
+              </Button>
+              <Button 
+                onClick={() => applyPresetRange('yesterday')} 
+                variant="outline" 
+                size="sm"
+              >
+                Yesterday
+              </Button>
+              <Button 
+                onClick={() => applyPresetRange('thisWeek')} 
+                variant="outline" 
+                size="sm"
+              >
+                This Week
+              </Button>
+              <Button 
+                onClick={() => applyPresetRange('last7days')} 
+                variant="outline" 
+                size="sm"
+              >
+                Last 7 Days
+              </Button>
+              <Button 
+                onClick={() => applyPresetRange('last30days')} 
+                variant="outline" 
+                size="sm"
+              >
+                Last 30 Days
+              </Button>
+              <Button 
+                onClick={() => applyPresetRange('thisMonth')} 
+                variant="outline" 
+                size="sm"
+              >
+                This Month
+              </Button>
+              <Button 
+                onClick={() => applyPresetRange('lastMonth')} 
+                variant="outline" 
+                size="sm"
+              >
+                Last Month
+              </Button>
             </div>
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium">To:</label>
-              <Input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-40"
-              />
+
+            {/* Date Range Selectors with Calendar Popups */}
+            <div className="flex items-center gap-4">
+              {/* Start Date */}
+              <div className="flex items-center gap-2">
+                <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                <label className="text-sm font-medium">From:</label>
+                <Popover open={isStartDateOpen} onOpenChange={setIsStartDateOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-[200px] justify-start text-left font-normal",
+                        !startDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarDays className="mr-2 h-4 w-4" />
+                      {startDate ? format(new Date(startDate), 'PPP') : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={startDate ? new Date(startDate) : undefined}
+                      onSelect={(date) => {
+                        if (date) {
+                          setStartDate(format(date, 'yyyy-MM-dd'));
+                          setIsStartDateOpen(false);
+                        }
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {/* End Date */}
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium">To:</label>
+                <Popover open={isEndDateOpen} onOpenChange={setIsEndDateOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-[200px] justify-start text-left font-normal",
+                        !endDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarDays className="mr-2 h-4 w-4" />
+                      {endDate ? format(new Date(endDate), 'PPP') : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={endDate ? new Date(endDate) : undefined}
+                      onSelect={(date) => {
+                        if (date) {
+                          setEndDate(format(date, 'yyyy-MM-dd'));
+                          setIsEndDateOpen(false);
+                        }
+                      }}
+                      disabled={(date) => {
+                        // Disable dates before start date
+                        return startDate ? date < new Date(startDate) : false;
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <Button onClick={fetchAttendanceData} variant="default" size="sm">
+                Refresh
+              </Button>
             </div>
-            <Button onClick={fetchAttendanceData} variant="default" size="sm">
-              Refresh
-            </Button>
           </div>
         </CardHeader>
         <CardContent>
