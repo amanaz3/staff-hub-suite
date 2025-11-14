@@ -11,6 +11,7 @@ import { AdminUsers } from "@/pages/AdminUsers";
 import { ClockInOutTestPage } from "@/pages/ClockInOutTestPage";
 import { DocumentManagement } from "@/components/DocumentManagement";
 import { AttendanceReport } from "@/components/AttendanceReport";
+import { PersonalAttendanceReport } from "@/components/PersonalAttendanceReport";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 
@@ -54,9 +55,10 @@ const Index = () => {
 
   const navigationItems = [
     { id: 'dashboard', label: 'Dashboard', icon: BarChart },
+    { id: 'my-attendance', label: 'My Attendance', icon: ClipboardList },
     { id: 'leaves', label: 'Leave Management', icon: Calendar },
     ...(profile?.role === 'admin' || profile?.role === 'manager' ? [
-      { id: 'attendance', label: 'Attendance Report', icon: ClipboardList },
+      { id: 'attendance', label: 'Attendance Report', icon: FileText },
       { id: 'documents', label: 'Staff Documents', icon: FileText },
     ] : []),
     ...(profile?.role === 'admin' ? [
@@ -212,6 +214,12 @@ const Index = () => {
           {activeTab === 'leaves' && (
             <div className="container mx-auto px-4 sm:px-6 py-8">
               <AdminDashboard userRole={profile.role} />
+            </div>
+          )}
+
+          {activeTab === 'my-attendance' && (
+            <div className="container mx-auto px-4 sm:px-6 py-8">
+              <PersonalAttendanceReport />
             </div>
           )}
 
