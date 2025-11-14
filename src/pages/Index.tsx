@@ -58,7 +58,7 @@ const Index = () => {
     { id: 'my-attendance', label: 'My Attendance', icon: ClipboardList },
     { id: 'leaves', label: 'Leave Management', icon: Calendar },
     ...(profile?.role === 'admin' || profile?.role === 'manager' ? [
-      { id: 'attendance', label: 'Attendance Report', icon: FileText },
+      { id: 'attendance', label: 'Team Attendance', icon: FileText },
       { id: 'documents', label: 'Staff Documents', icon: FileText },
     ] : []),
     ...(profile?.role === 'admin' ? [
