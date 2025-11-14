@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Download, Calendar as CalendarIcon, List, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, getDay, differenceInMinutes, addMonths, subMonths } from 'date-fns';
 import { toast } from 'sonner';
-import { toGST, formatInGST } from '@/lib/timezone';
+import { toGST, formatInGST, createGSTDate } from '@/lib/timezone';
 import { useAuth } from '@/hooks/useAuth';
 import { AttendanceCalendar } from './AttendanceCalendar';
 import { AttendanceDayModal } from './AttendanceDayModal';
@@ -124,15 +124,27 @@ export const PersonalAttendanceReport = () => {
       const clockInTime = record.clock_in_time ? toGST(record.clock_in_time) : null;
       const clockOutTime = record.clock_out_time ? toGST(record.clock_out_time) : null;
 
-      // Calculate expected times
+      // Calculate expected times in GST
       const [schedStartHour, schedStartMin] = schedule.start_time.split(':').map(Number);
       const [schedEndHour, schedEndMin] = schedule.end_time.split(':').map(Number);
       
-      const expectedClockIn = new Date(recordDate);
-      expectedClockIn.setHours(schedStartHour, schedStartMin, 0, 0);
+      const expectedClockIn = createGSTDate(
+        recordDate.getFullYear(),
+        recordDate.getMonth(),
+        recordDate.getDate(),
+        schedStartHour,
+        schedStartMin,
+        0
+      );
       
-      const expectedClockOut = new Date(recordDate);
-      expectedClockOut.setHours(schedEndHour, schedEndMin, 0, 0);
+      const expectedClockOut = createGSTDate(
+        recordDate.getFullYear(),
+        recordDate.getMonth(),
+        recordDate.getDate(),
+        schedEndHour,
+        schedEndMin,
+        0
+      );
 
       // Calculate late/early
       let lateMinutes = 0;
