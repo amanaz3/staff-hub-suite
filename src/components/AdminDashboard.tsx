@@ -16,12 +16,6 @@ interface AdminDashboardProps {
 
 export const AdminDashboard = ({ userRole }: AdminDashboardProps) => {
   const [activeTab, setActiveTab] = useState('leave');
-  const [selectedEmployeeForReport, setSelectedEmployeeForReport] = useState<string>('all');
-
-  const handleBreachClick = (employeeId: string) => {
-    setSelectedEmployeeForReport(employeeId);
-    setActiveTab('attendance-report');
-  };
 
   // Staff users see simplified view
   if (userRole === 'staff') {
@@ -34,10 +28,10 @@ export const AdminDashboard = ({ userRole }: AdminDashboardProps) => {
   return (
     <div className="space-y-6">
       {/* Attendance Stats Widget - Only for Admins */}
-      {isAdmin && <AttendanceStatsWidget onBreachClick={handleBreachClick} />}
+      {isAdmin && <AttendanceStatsWidget />}
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-7' : 'grid-cols-3'}`}>
+        <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-6' : 'grid-cols-2'}`}>
           <TabsTrigger value="leave" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
             Leave Requests
@@ -45,10 +39,6 @@ export const AdminDashboard = ({ userRole }: AdminDashboardProps) => {
           <TabsTrigger value="exceptions" className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4" />
             Absences
-          </TabsTrigger>
-          <TabsTrigger value="attendance-report" className="flex items-center gap-2">
-            <ClipboardList className="h-4 w-4" />
-            Team Attendance
           </TabsTrigger>
           {isAdmin && (
             <>
@@ -78,13 +68,6 @@ export const AdminDashboard = ({ userRole }: AdminDashboardProps) => {
 
         <TabsContent value="exceptions" className="mt-6">
           <ExceptionApprovalQueue />
-        </TabsContent>
-
-        <TabsContent value="attendance-report" className="mt-6">
-          <AttendanceReport 
-            preselectedEmployee={selectedEmployeeForReport}
-            onEmployeeChange={setSelectedEmployeeForReport}
-          />
         </TabsContent>
 
         {isAdmin && (
