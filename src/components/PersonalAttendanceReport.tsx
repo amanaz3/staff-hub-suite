@@ -258,8 +258,17 @@ export const PersonalAttendanceReport = () => {
     if (minutes === 0) return '-';
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
-    if (hours > 0) return `${hours}h ${mins}m`;
-    return `${mins}m`;
+    if (hours > 0) return `${hours} Hrs ${mins} Mins`;
+    return `${mins} Mins`;
+  };
+
+  const formatTotalHours = (decimalHours: number) => {
+    if (!decimalHours) return '-';
+    const hours = Math.floor(decimalHours);
+    const mins = Math.round((decimalHours - hours) * 60);
+    if (hours > 0 && mins > 0) return `${hours} Hrs ${mins} Mins`;
+    if (hours > 0) return `${hours} Hrs`;
+    return `${mins} Mins`;
   };
 
   const getRowColor = (record: any) => {
@@ -332,7 +341,7 @@ export const PersonalAttendanceReport = () => {
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Hours</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">{summary.totalHours}</p>
+            <p className="text-2xl font-bold">{formatTotalHours(parseFloat(summary.totalHours))}</p>
           </CardContent>
         </Card>
       </div>
@@ -465,7 +474,7 @@ export const PersonalAttendanceReport = () => {
                         {record.isWorkingDay ? format(record.expectedClockOut, 'HH:mm:ss') : '-'}
                       </TableCell>
                       <TableCell className="text-right">
-                        {record.total_hours ? record.total_hours.toFixed(2) : '-'}
+                        {record.total_hours ? formatTotalHours(record.total_hours) : '-'}
                       </TableCell>
                       <TableCell className="text-right">
                         <span className={record.lateMinutes > 0 ? 'text-yellow-600 dark:text-yellow-400 font-medium' : ''}>

@@ -47,8 +47,17 @@ export const AttendanceDayModal = ({
     if (minutes === 0) return 'On time';
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
-    if (hours > 0) return `${hours}h ${mins}m`;
-    return `${mins}m`;
+    if (hours > 0) return `${hours} Hrs ${mins} Mins`;
+    return `${mins} Mins`;
+  };
+
+  const formatTotalHours = (decimalHours: number) => {
+    if (!decimalHours) return '0 Hrs';
+    const hours = Math.floor(decimalHours);
+    const mins = Math.round((decimalHours - hours) * 60);
+    if (hours > 0 && mins > 0) return `${hours} Hrs ${mins} Mins`;
+    if (hours > 0) return `${hours} Hrs`;
+    return `${mins} Mins`;
   };
 
   return (
@@ -172,7 +181,7 @@ export const AttendanceDayModal = ({
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">Total Hours Worked</span>
                   <span className="text-lg font-bold">
-                    {record.total_hours ? record.total_hours.toFixed(2) : '0.00'}h
+                    {record.total_hours ? formatTotalHours(record.total_hours) : '0 Hrs'}
                   </span>
                 </div>
               </>
