@@ -3,6 +3,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { 
   Users, 
   UserCheck, 
@@ -10,7 +15,9 @@ import {
   Clock, 
   AlertTriangle,
   TrendingUp,
-  TrendingDown
+  TrendingDown,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { startOfMonth, endOfMonth, format, isWeekend } from 'date-fns';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
@@ -50,6 +57,7 @@ interface AttendanceStatsWidgetProps {
 export const AttendanceStatsWidget = ({ onBreachClick }: AttendanceStatsWidgetProps) => {
   const [stats, setStats] = useState<AttendanceStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
   const currentMonth = new Date();
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
@@ -263,35 +271,49 @@ export const AttendanceStatsWidget = ({ onBreachClick }: AttendanceStatsWidgetPr
   const trendDirection = stats.attendanceRate >= 90 ? 'up' : 'down';
 
   return (
-    <Card className="p-6 mb-6 bg-gradient-to-br from-background to-muted/20">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-2xl font-bold text-foreground">
-            Attendance Overview - {format(currentMonth, 'MMMM yyyy')}
-          </h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            Real-time attendance statistics across all employees
-          </p>
-        </div>
-        <Badge 
-          variant={stats.totalBreaches > 0 ? 'destructive' : 'default'}
-          className="text-lg px-4 py-2"
-        >
-          {stats.totalBreaches > 0 ? (
-            <>
-              <AlertTriangle className="h-5 w-5 mr-2" />
-              {stats.totalBreaches} Breach{stats.totalBreaches !== 1 ? 'es' : ''}
-            </>
-          ) : (
-            <>
-              <UserCheck className="h-5 w-5 mr-2" />
-              No Breaches
-            </>
-          )}
-        </Badge>
-      </div>
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <Card className="mb-6 bg-gradient-to-br from-background to-muted/20">
+        <CollapsibleTrigger asChild>
+          <div className="p-6 cursor-pointer hover:bg-muted/10 transition-colors">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {isOpen ? (
+                  <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                ) : (
+                  <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                )}
+                <div>
+                  <h2 className="text-2xl font-bold text-foreground">
+                    Attendance Overview - {format(currentMonth, 'MMMM yyyy')}
+                  </h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Real-time attendance statistics across all employees
+                  </p>
+                </div>
+              </div>
+              <Badge 
+                variant={stats.totalBreaches > 0 ? 'destructive' : 'default'}
+                className="text-lg px-4 py-2"
+              >
+                {stats.totalBreaches > 0 ? (
+                  <>
+                    <AlertTriangle className="h-5 w-5 mr-2" />
+                    {stats.totalBreaches} Breach{stats.totalBreaches !== 1 ? 'es' : ''}
+                  </>
+                ) : (
+                  <>
+                    <UserCheck className="h-5 w-5 mr-2" />
+                    No Breaches
+                  </>
+                )}
+              </Badge>
+            </div>
+          </div>
+        </CollapsibleTrigger>
 
-      {/* Stats Cards */}
+        <CollapsibleContent>
+          <div className="px-6 pb-6">
+            {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <Card className="p-4 bg-card border-2">
           <div className="flex items-center justify-between">
@@ -471,6 +493,9 @@ export const AttendanceStatsWidget = ({ onBreachClick }: AttendanceStatsWidgetPr
           </div>
         </Card>
       )}
-    </Card>
+          </div>
+        </CollapsibleContent>
+      </Card>
+    </Collapsible>
   );
 };
