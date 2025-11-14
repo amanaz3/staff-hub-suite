@@ -9,6 +9,7 @@ import { AttendanceReport } from './AttendanceReport';
 import { Clock, Shield, AlertTriangle, Calendar, FileText, ClipboardList, Bell } from 'lucide-react';
 import { AttendanceNotificationLog } from './AttendanceNotificationLog';
 import { AttendanceStatsWidget } from './AttendanceStatsWidget';
+import { TeamAttendanceReport } from './TeamAttendanceReport';
 
 interface AdminDashboardProps {
   userRole: 'admin' | 'staff' | 'manager';
@@ -31,7 +32,7 @@ export const AdminDashboard = ({ userRole }: AdminDashboardProps) => {
       {isAdmin && <AttendanceStatsWidget />}
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-6' : 'grid-cols-2'}`}>
+        <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-7' : 'grid-cols-2'}`}>
           <TabsTrigger value="leave" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
             Leave Requests
@@ -42,6 +43,10 @@ export const AdminDashboard = ({ userRole }: AdminDashboardProps) => {
           </TabsTrigger>
           {isAdmin && (
             <>
+              <TabsTrigger value="team-attendance" className="flex items-center gap-2">
+                <ClipboardList className="h-4 w-4" />
+                Team Attendance
+              </TabsTrigger>
               <TabsTrigger value="schedules" className="flex items-center gap-2">
                 <Clock className="h-4 w-4" />
                 Work Schedules
@@ -72,6 +77,10 @@ export const AdminDashboard = ({ userRole }: AdminDashboardProps) => {
 
         {isAdmin && (
           <>
+            <TabsContent value="team-attendance" className="mt-6">
+              <TeamAttendanceReport />
+            </TabsContent>
+
             <TabsContent value="schedules" className="mt-6">
               <WorkScheduleManagement />
             </TabsContent>
