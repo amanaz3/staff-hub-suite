@@ -6,19 +6,40 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Download, Calendar } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, getDay, differenceInMinutes } from 'date-fns';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Download, Calendar as CalendarIcon, List, ChevronLeft, ChevronRight } from 'lucide-react';
+import { format, startOfMonth, endOfMonth, getDay, differenceInMinutes, addMonths, subMonths } from 'date-fns';
 import { toast } from 'sonner';
 import { toGST, formatInGST } from '@/lib/timezone';
 import { useAuth } from '@/hooks/useAuth';
+import { AttendanceCalendar } from './AttendanceCalendar';
+import { AttendanceDayModal } from './AttendanceDayModal';
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 export const PersonalAttendanceReport = () => {
   const { user } = useAuth();
   const currentDate = new Date();
+  const [viewMode, setViewMode] = useState<'table' | 'calendar'>('calendar');
+  const [selectedMonth, setSelectedMonth] = useState(currentDate);
   const [startDate, setStartDate] = useState(format(startOfMonth(currentDate), 'yyyy-MM-dd'));
   const [endDate, setEndDate] = useState(format(endOfMonth(currentDate), 'yyyy-MM-dd'));
+  const [selectedDayRecord, setSelectedDayRecord] = useState<any>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+
+  // Update date range when selected month changes
+  const handleMonthChange = (newMonth: Date) => {
+    setSelectedMonth(newMonth);
+    setStartDate(format(startOfMonth(newMonth), 'yyyy-MM-dd'));
+    setEndDate(format(endOfMonth(newMonth), 'yyyy-MM-dd'));
+  };
+
+  const handleDayClick = (record: any, date: Date) => {
+    setSelectedDayRecord(record);
+    setSelectedDate(date);
+    setModalOpen(true);
+  };
 
   // Fetch employee's own data with work schedule
   const { data: employeeData } = useQuery({
@@ -315,20 +336,6 @@ export const PersonalAttendanceReport = () => {
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-2">
-              <div className="flex gap-2">
-                <Input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="w-[150px]"
-                />
-                <Input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="w-[150px]"
-                />
-              </div>
               <Button onClick={handleExport} variant="outline" size="sm">
                 <Download className="h-4 w-4 mr-2" />
                 Export CSV
@@ -337,12 +344,78 @@ export const PersonalAttendanceReport = () => {
           </div>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <div className="text-center py-8 text-muted-foreground">Loading attendance data...</div>
-          ) : processedData.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">No attendance records found for this period</div>
-          ) : (
-            <div className="overflow-x-auto">
+          <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'table' | 'calendar')}>
+            <div className="flex items-center justify-between mb-4">
+              <TabsList>
+                <TabsTrigger value="calendar" className="flex items-center gap-2">
+                  <CalendarIcon className="h-4 w-4" />
+                  Calendar
+                </TabsTrigger>
+                <TabsTrigger value="table" className="flex items-center gap-2">
+                  <List className="h-4 w-4" />
+                  Table
+                </TabsTrigger>
+              </TabsList>
+
+              {viewMode === 'calendar' && (
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleMonthChange(subMonths(selectedMonth, 1))}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span className="text-sm font-medium min-w-[150px] text-center">
+                    {format(selectedMonth, 'MMMM yyyy')}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleMonthChange(addMonths(selectedMonth, 1))}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+
+              {viewMode === 'table' && (
+                <div className="flex gap-2">
+                  <Input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="w-[150px]"
+                  />
+                  <Input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="w-[150px]"
+                  />
+                </div>
+              )}
+            </div>
+
+            <TabsContent value="calendar" className="mt-0">
+              {isLoading ? (
+                <div className="text-center py-8 text-muted-foreground">Loading attendance data...</div>
+              ) : (
+                <AttendanceCalendar
+                  month={selectedMonth}
+                  attendanceData={processedData}
+                  onDayClick={handleDayClick}
+                />
+              )}
+            </TabsContent>
+
+            <TabsContent value="table" className="mt-0">
+              {isLoading ? (
+                <div className="text-center py-8 text-muted-foreground">Loading attendance data...</div>
+              ) : processedData.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">No attendance records found for this period</div>
+              ) : (
+                <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -419,8 +492,18 @@ export const PersonalAttendanceReport = () => {
               </Table>
             </div>
           )}
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
+
+      {/* Day Details Modal */}
+      <AttendanceDayModal
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        record={selectedDayRecord}
+        date={selectedDate || new Date()}
+      />
     </div>
   );
 };
