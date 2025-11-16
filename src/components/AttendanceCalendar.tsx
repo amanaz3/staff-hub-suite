@@ -9,7 +9,8 @@ import {
   isSameMonth,
   startOfWeek,
   endOfWeek,
-  getDay
+  getDay,
+  isValid
 } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { formatInGST } from '@/lib/timezone';
@@ -49,10 +50,20 @@ export const AttendanceCalendar = ({
   
   // Generate calendar grid
   const calendarDays = useMemo(() => {
+    // Validate month prop
+    if (!month || !isValid(month)) {
+      return [];
+    }
+    
     const monthStart = startOfMonth(month);
     const monthEnd = endOfMonth(month);
     const calendarStart = startOfWeek(monthStart);
     const calendarEnd = endOfWeek(monthEnd);
+    
+    // Validate calculated dates
+    if (!isValid(monthStart) || !isValid(monthEnd) || !isValid(calendarStart) || !isValid(calendarEnd)) {
+      return [];
+    }
     
     return eachDayOfInterval({ start: calendarStart, end: calendarEnd });
   }, [month]);
@@ -139,7 +150,7 @@ export const AttendanceCalendar = ({
   };
 
   const formatTime = (time: Date | null) => {
-    if (!time) return '--:--';
+    if (!time || !isValid(time)) return '--:--';
     return formatInGST(time, 'HH:mm');
   };
 
@@ -162,6 +173,9 @@ export const AttendanceCalendar = ({
 
         {/* Calendar days */}
         {calendarDays.map((date, index) => {
+          // Validate date before formatting
+          if (!isValid(date)) return null;
+          
           const dateStr = format(date, 'yyyy-MM-dd');
           const record = attendanceMap.get(dateStr);
           const isCurrentMonth = isSameMonth(date, month);
