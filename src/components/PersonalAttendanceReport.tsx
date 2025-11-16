@@ -342,14 +342,16 @@ export const PersonalAttendanceReport = () => {
             <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{summary.daysEarly}</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Hours</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{formatTotalHours(parseFloat(summary.totalHours))}</p>
-          </CardContent>
-        </Card>
+        {!isStaff && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total Hours</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold">{formatTotalHours(parseFloat(summary.totalHours))}</p>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Main Report Card */}
