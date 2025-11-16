@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,7 +18,11 @@ interface LeaveRequestsViewProps {
 }
 
 export const LeaveRequestsView = ({ userRole }: LeaveRequestsViewProps) => {
-  const [showNewRequest, setShowNewRequest] = useState(false);
+  // Dialog states
+  const [showAddLeaveDialog, setShowAddLeaveDialog] = useState(false);
+  const [showBalanceDialog, setShowBalanceDialog] = useState(false);
+  const [showExistingDialog, setShowExistingDialog] = useState(false);
+  
   const [newRequest, setNewRequest] = useState({
     type: "",
     startDate: "",
@@ -36,11 +41,16 @@ export const LeaveRequestsView = ({ userRole }: LeaveRequestsViewProps) => {
   const [leaveBalances, setLeaveBalances] = useState<any>({
     annual: { used: 0, total: 0, remaining: 0 },
     sick: { used: 0, total: 0, remaining: 0 },
-    personal: { used: 0, total: 0, remaining: 0 }
+    study: { used: 0, total: 0, remaining: 0 }
   });
+  const [wfhBalance, setWfhBalance] = useState({ used: 0, allocated: 15, remaining: 15 });
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
   const [loadingRequests, setLoadingRequests] = useState(true);
 
-  // Fetch employee ID and attendance exceptions
+  // Filter leave types to only show these in forms/lists
+  const ALLOWED_LEAVE_TYPES = ['Annual Leave', 'Sick Leave', 'Study Leave'];
+
+  // Fetch employee ID and data
   useEffect(() => {
     const fetchEmployeeData = async () => {
       if (user?.id) {
@@ -59,6 +69,24 @@ export const LeaveRequestsView = ({ userRole }: LeaveRequestsViewProps) => {
     fetchEmployeeData();
   }, [user]);
 
+  // Fetch WFH balance from attendance table
+  const fetchWFHBalance = async (empId: string, year: string) => {
+    const { count } = await supabase
+      .from('attendance')
+      .select('*', { count: 'exact', head: true })
+      .eq('employee_id', empId)
+      .eq('is_wfh', true)
+      .gte('date', `${year}-01-01`)
+      .lte('date', `${year}-12-31`);
+    
+    const used = count || 0;
+    setWfhBalance({
+      used,
+      allocated: 15,
+      remaining: 15 - used
+    });
+  };
+
   // Fetch leave types and requests
   useEffect(() => {
     const fetchLeaveData = async () => {
@@ -75,8 +103,9 @@ export const LeaveRequestsView = ({ userRole }: LeaveRequestsViewProps) => {
             .select(`
               *,
               employee:employees(full_name, department),
-              leave_type:leave_types(name)
+              leave_type:leave_types!inner(name)
             `)
+            .in('leave_type.name', ALLOWED_LEAVE_TYPES)
             .order('created_at', { ascending: false });
           setLeaveRequests(requests || []);
         } else if (employeeId) {
@@ -84,20 +113,28 @@ export const LeaveRequestsView = ({ userRole }: LeaveRequestsViewProps) => {
             supabase.from('leave_requests').select(`
               *,
               employee:employees(full_name, department),
-              leave_type:leave_types(name)
-            `).eq('employee_id', employeeId).order('created_at', { ascending: false }),
+              leave_type:leave_types!inner(name)
+            `).eq('employee_id', employeeId)
+              .in('leave_type.name', ALLOWED_LEAVE_TYPES)
+              .order('created_at', { ascending: false }),
             supabase.from('employee_leave_balances').select(`
               *,
-              leave_type:leave_types(name)
-            `).eq('employee_id', employeeId).eq('year', new Date().getFullYear())
+              leave_type:leave_types!inner(name)
+            `).eq('employee_id', employeeId)
+              .eq('year', parseInt(selectedYear))
+              .in('leave_type.name', ALLOWED_LEAVE_TYPES)
           ]);
 
           setLeaveRequests(requestsResult.data || []);
 
           if (balancesResult.data) {
-            const balances: any = { annual: { used: 0, total: 0, remaining: 0 }, sick: { used: 0, total: 0, remaining: 0 }, personal: { used: 0, total: 0, remaining: 0 } };
+            const balances: any = { 
+              annual: { used: 0, total: 0, remaining: 0 }, 
+              sick: { used: 0, total: 0, remaining: 0 }, 
+              study: { used: 0, total: 0, remaining: 0 } 
+            };
             balancesResult.data.forEach((balance: any) => {
-              const leaveTypeName = balance.leave_type?.name.toLowerCase();
+              const leaveTypeName = balance.leave_type?.name.toLowerCase().replace(' leave', '');
               if (leaveTypeName && balances[leaveTypeName]) {
                 balances[leaveTypeName] = {
                   used: balance.used_days,
@@ -108,6 +145,9 @@ export const LeaveRequestsView = ({ userRole }: LeaveRequestsViewProps) => {
             });
             setLeaveBalances(balances);
           }
+
+          // Fetch WFH balance
+          await fetchWFHBalance(employeeId, selectedYear);
         }
       } catch (error) {
         console.error('Error fetching leave data:', error);
@@ -119,7 +159,7 @@ export const LeaveRequestsView = ({ userRole }: LeaveRequestsViewProps) => {
     if (userRole === 'admin' || employeeId) {
       fetchLeaveData();
     }
-  }, [userRole, employeeId]);
+  }, [userRole, employeeId, selectedYear]);
 
   const handleSubmitRequest = async () => {
     try {
@@ -208,6 +248,16 @@ export const LeaveRequestsView = ({ userRole }: LeaveRequestsViewProps) => {
         description: "Your request has been sent for approval"
       });
 
+      setShowAddLeaveDialog(false);
+      setNewRequest({
+        type: "",
+        startDate: "",
+        endDate: "",
+        reason: "",
+        medicalCertificateUrl: "",
+        relationship: ""
+      });
+
       if (userRole === 'staff' && employeeId) {
         const { data: requests } = await supabase
           .from('leave_requests')
@@ -229,7 +279,6 @@ export const LeaveRequestsView = ({ userRole }: LeaveRequestsViewProps) => {
         medicalCertificateUrl: "",
         relationship: ""
       });
-      setShowNewRequest(false);
     } catch (error) {
       console.error('Error submitting leave request:', error);
       toast({
@@ -359,173 +408,241 @@ export const LeaveRequestsView = ({ userRole }: LeaveRequestsViewProps) => {
             {userRole === 'admin' ? 'Manage all leave requests' : 'Submit and track your leave requests'}
           </p>
         </div>
-        {userRole === 'staff' && (
-          <Button onClick={() => setShowNewRequest(!showNewRequest)}>
-            <Plus className="h-4 w-4 mr-2" />
-            New Request
-          </Button>
-        )}
       </div>
 
-      {/* Employment Status & Leave Balances (Staff only) */}
-      {userRole === 'staff' && employeeData && (
-        <div className="grid gap-4 md:grid-cols-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">Service Duration</CardTitle>
+      {/* Three Widget Cards (Staff only) */}
+      {userRole === 'staff' && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Widget 1: Add Leave Request */}
+          <Card 
+            className="cursor-pointer hover:shadow-lg transition-all bg-gradient-to-br from-blue-500 to-blue-600 text-white border-0"
+            onClick={() => setShowAddLeaveDialog(true)}
+          >
+            <CardHeader>
+              <Plus className="h-8 w-8 mb-2" />
+              <CardTitle className="text-white">Add Leave Request</CardTitle>
+              <CardDescription className="text-white/80">
+                Submit a new leave request
+              </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-foreground">
-                {formatServiceDuration(
-                  calculateServiceDuration(employeeData.hire_date).years,
-                  calculateServiceDuration(employeeData.hire_date).months
-                )}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Since {formatDate(employeeData.hire_date)}
-              </p>
-            </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium flex items-center">
-                <Calendar className="h-4 w-4 mr-2 text-blue-500" />
-                Annual Leave
-              </CardTitle>
+          {/* Widget 2: Leave Balance */}
+          <Card 
+            className="cursor-pointer hover:shadow-lg transition-all bg-gradient-to-br from-green-500 to-green-600 text-white border-0"
+            onClick={() => setShowBalanceDialog(true)}
+          >
+            <CardHeader>
+              <Calendar className="h-8 w-8 mb-2" />
+              <CardTitle className="text-white">Leave Balance</CardTitle>
+              <CardDescription className="text-white/80">
+                View your leave balances
+              </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="text-2xl font-bold text-foreground">{leaveBalances.annual.remaining}</div>
-                <div className="text-xs text-muted-foreground">
-                  {leaveBalances.annual.used} used • {leaveBalances.annual.total} total
-                </div>
-                <div className="w-full bg-muted rounded-full h-2">
-                  <div 
-                    className="bg-blue-500 h-2 rounded-full transition-all duration-300" 
-                    style={{ width: `${(leaveBalances.annual.used / leaveBalances.annual.total) * 100}%` }}
-                  />
-                </div>
-              </div>
-            </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium flex items-center">
-                <AlertCircle className="h-4 w-4 mr-2 text-red-500" />
-                Sick Leave
-              </CardTitle>
+          {/* Widget 3: Existing Leaves */}
+          <Card 
+            className="cursor-pointer hover:shadow-lg transition-all bg-gradient-to-br from-purple-500 to-purple-600 text-white border-0"
+            onClick={() => setShowExistingDialog(true)}
+          >
+            <CardHeader>
+              <FileText className="h-8 w-8 mb-2" />
+              <CardTitle className="text-white">Existing Leaves</CardTitle>
+              <CardDescription className="text-white/80">
+                View submitted requests
+              </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="text-2xl font-bold text-foreground">{leaveBalances.sick.remaining}</div>
-                <div className="text-xs text-muted-foreground">
-                  {leaveBalances.sick.used} used • {leaveBalances.sick.total} total
-                </div>
-                <div className="w-full bg-muted rounded-full h-2">
-                  <div 
-                    className="bg-red-500 h-2 rounded-full transition-all duration-300" 
-                    style={{ width: `${(leaveBalances.sick.used / leaveBalances.sick.total) * 100}%` }}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium flex items-center">
-                <FileText className="h-4 w-4 mr-2 text-primary" />
-                Personal Leave
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="text-2xl font-bold text-foreground">{leaveBalances.personal.remaining}</div>
-                <div className="text-xs text-muted-foreground">
-                  {leaveBalances.personal.used} used • {leaveBalances.personal.total} total
-                </div>
-                <div className="w-full bg-muted rounded-full h-2">
-                  <div 
-                    className="bg-primary h-2 rounded-full transition-all duration-300" 
-                    style={{ width: `${(leaveBalances.personal.used / leaveBalances.personal.total) * 100}%` }}
-                  />
-                </div>
-              </div>
-            </CardContent>
           </Card>
         </div>
       )}
 
-      {/* New Request Form */}
-      {showNewRequest && userRole === 'staff' && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Submit New Request</CardTitle>
-            <CardDescription>Submit a new leave request for annual leave, sick leave, and other time-off</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
+      {/* Add Leave Request Dialog */}
+      <Dialog open={showAddLeaveDialog} onOpenChange={setShowAddLeaveDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Submit New Leave Request</DialogTitle>
+            <DialogDescription>
+              Submit a request for annual leave, sick leave, or study leave
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="leave-type">Leave Type *</Label>
+              <Select value={newRequest.type} onValueChange={(value) => setNewRequest({ ...newRequest, type: value })}>
+                <SelectTrigger id="leave-type">
+                  <SelectValue placeholder="Select leave type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {leaveTypes.filter(type => ALLOWED_LEAVE_TYPES.includes(type.name)).map((type) => (
+                    <SelectItem key={type.id} value={type.id}>
+                      {type.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="leave-type">Leave Type *</Label>
-                <Select value={newRequest.type} onValueChange={(value) => setNewRequest({ ...newRequest, type: value })}>
-                  <SelectTrigger id="leave-type">
-                    <SelectValue placeholder="Select leave type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {leaveTypes.map((type) => (
-                      <SelectItem key={type.id} value={type.id}>
-                        {type.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="start-date">Start Date *</Label>
-                  <Input
-                    id="start-date"
-                    type="date"
-                    value={newRequest.startDate}
-                    onChange={(e) => setNewRequest({ ...newRequest, startDate: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="end-date">End Date *</Label>
-                  <Input
-                    id="end-date"
-                    type="date"
-                    value={newRequest.endDate}
-                    onChange={(e) => setNewRequest({ ...newRequest, endDate: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="reason">Reason *</Label>
-                <Textarea
-                  id="reason"
-                  value={newRequest.reason}
-                  onChange={(e) => setNewRequest({ ...newRequest, reason: e.target.value })}
-                  placeholder="Please provide a detailed reason for your leave request"
-                  rows={4}
+                <Label htmlFor="start-date">Start Date *</Label>
+                <Input
+                  id="start-date"
+                  type="date"
+                  value={newRequest.startDate}
+                  onChange={(e) => setNewRequest({ ...newRequest, startDate: e.target.value })}
                 />
               </div>
-
-              <div className="flex gap-2 justify-end">
-                <Button variant="outline" onClick={() => setShowNewRequest(false)}>Cancel</Button>
-                <Button onClick={handleSubmitRequest}>Submit Request</Button>
+              <div className="space-y-2">
+                <Label htmlFor="end-date">End Date *</Label>
+                <Input
+                  id="end-date"
+                  type="date"
+                  value={newRequest.endDate}
+                  onChange={(e) => setNewRequest({ ...newRequest, endDate: e.target.value })}
+                />
               </div>
             </div>
-          </CardContent>
-        </Card>
-      )}
 
-      {/* Leave Requests List */}
+            <div className="space-y-2">
+              <Label htmlFor="reason">Reason *</Label>
+              <Textarea
+                id="reason"
+                placeholder="Enter the reason for your leave request"
+                value={newRequest.reason}
+                onChange={(e) => setNewRequest({ ...newRequest, reason: e.target.value })}
+                rows={3}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="medical-cert">Medical Certificate URL (if applicable)</Label>
+              <Input
+                id="medical-cert"
+                type="url"
+                placeholder="https://..."
+                value={newRequest.medicalCertificateUrl}
+                onChange={(e) => setNewRequest({ ...newRequest, medicalCertificateUrl: e.target.value })}
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4">
+              <Button variant="outline" onClick={() => setShowAddLeaveDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSubmitRequest}>
+                Submit Request
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Leave Balance Dialog */}
+      <Dialog open={showBalanceDialog} onOpenChange={setShowBalanceDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Plan Balances</DialogTitle>
+          </DialogHeader>
+          
+          {/* Year Selector */}
+          <div className="flex items-center justify-between mb-4">
+            <Label>Balance As-of Date</Label>
+            <Select value={selectedYear} onValueChange={setSelectedYear}>
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="2025">2025</SelectItem>
+                <SelectItem value="2024">2024</SelectItem>
+                <SelectItem value="2023">2023</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Balance List */}
+          <div className="space-y-3">
+            <div className="flex justify-between items-center py-3 border-b">
+              <span className="font-medium">Annual Leave</span>
+              <span className="font-semibold">{leaveBalances.annual.remaining} Days</span>
+            </div>
+            <div className="flex justify-between items-center py-3 border-b">
+              <span className="font-medium">Sick Leave</span>
+              <span className="font-semibold">{leaveBalances.sick.remaining} Days</span>
+            </div>
+            <div className="flex justify-between items-center py-3 border-b">
+              <span className="font-medium">Study Leave</span>
+              <span className="font-semibold">{leaveBalances.study.remaining} Days</span>
+            </div>
+            <div className="flex justify-between items-center py-3">
+              <span className="font-medium">Work from Home</span>
+              <span className="font-semibold">{wfhBalance.used}/{wfhBalance.allocated} Days</span>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Existing Leaves Dialog */}
+      <Dialog open={showExistingDialog} onOpenChange={setShowExistingDialog}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Your Leave Requests</DialogTitle>
+            <DialogDescription>
+              View all your submitted leave requests
+            </DialogDescription>
+          </DialogHeader>
+          
+          {loadingRequests ? (
+            <div className="text-center py-8 text-muted-foreground">Loading...</div>
+          ) : leaveRequests.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">No leave requests found</div>
+          ) : (
+            <div className="space-y-3">
+              {leaveRequests.map((request) => (
+                <Card key={request.id} className="border">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {getStatusIcon(request.status)}
+                        <CardTitle className="text-base">{request.leave_type?.name}</CardTitle>
+                      </div>
+                      {getStatusBadge(request.status)}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-sm">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <span className="text-muted-foreground">Start Date:</span> {formatDate(request.start_date)}
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">End Date:</span> {formatDate(request.end_date)}
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Days:</span> {request.total_days}
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Submitted:</span> {formatDate(request.created_at)}
+                      </div>
+                    </div>
+                    {request.reason && (
+                      <div>
+                        <span className="text-muted-foreground">Reason:</span> {request.reason}
+                      </div>
+                    )}
+                    {request.review_comments && (
+                      <div>
+                        <span className="text-muted-foreground">Review Comments:</span> {request.review_comments}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Leave Requests List (For Admin) */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center">
