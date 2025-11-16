@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Clock } from 'lucide-react';
-import { format, startOfWeek, endOfWeek, isWithinInterval, parseISO } from 'date-fns';
+import { format, startOfWeek, endOfWeek, isWithinInterval, parseISO, isValid } from 'date-fns';
 
 interface AttendanceRecord {
   date: string;
@@ -36,7 +36,13 @@ export function WeeklyHoursSummary({ attendanceData, month }: WeeklyHoursSummary
       
       // Filter attendance records for this week
       const weekRecords = attendanceData.filter(record => {
+        if (!record.date) return false;
+        
         const recordDate = parseISO(record.date);
+        
+        // Skip invalid dates
+        if (!isValid(recordDate)) return false;
+        
         return isWithinInterval(recordDate, { start: weekStart, end: weekEnd }) &&
                record.status === 'present' &&
                record.total_hours !== undefined;
@@ -73,29 +79,37 @@ export function WeeklyHoursSummary({ attendanceData, month }: WeeklyHoursSummary
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {weeklySummaries.map((week, index) => (
-            <div
-              key={index}
-              className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
-            >
-              <div className="flex-1">
-                <p className="text-sm font-medium text-foreground">
-                  Week {index + 1}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {format(week.weekStart, 'MMM d')} - {format(week.weekEnd, 'MMM d, yyyy')}
-                </p>
+          {weeklySummaries.map((week, index) => {
+            // Validate dates before formatting
+            const startValid = isValid(week.weekStart);
+            const endValid = isValid(week.weekEnd);
+            
+            if (!startValid || !endValid) return null;
+            
+            return (
+              <div
+                key={index}
+                className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+              >
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-foreground">
+                    Week {index + 1}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {format(week.weekStart, 'MMM d')} - {format(week.weekEnd, 'MMM d, yyyy')}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-lg font-bold text-foreground">
+                    {week.totalHours.toFixed(1)} Hrs
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {week.daysWorked} {week.daysWorked === 1 ? 'day' : 'days'}
+                  </p>
+                </div>
               </div>
-              <div className="text-right">
-                <p className="text-lg font-bold text-foreground">
-                  {week.totalHours.toFixed(1)} Hrs
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {week.daysWorked} {week.daysWorked === 1 ? 'day' : 'days'}
-                </p>
-              </div>
-            </div>
-          ))}
+            );
+          })}
           
           {weeklySummaries.length > 0 && (
             <div className="flex items-center justify-between p-4 rounded-lg bg-primary/10 border-2 border-primary/20 mt-4">
