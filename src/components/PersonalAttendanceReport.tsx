@@ -18,7 +18,8 @@ import { AttendanceDayModal } from './AttendanceDayModal';
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 export const PersonalAttendanceReport = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const isStaff = profile?.role === 'staff';
   const currentDate = new Date();
   const [viewMode, setViewMode] = useState<'table' | 'calendar'>('calendar');
   const [selectedMonth, setSelectedMonth] = useState(currentDate);
@@ -426,6 +427,7 @@ export const PersonalAttendanceReport = () => {
                   month={selectedMonth}
                   attendanceData={processedData}
                   onDayClick={handleDayClick}
+                  showWeeklySummary={!isStaff}
                 />
               )}
             </TabsContent>

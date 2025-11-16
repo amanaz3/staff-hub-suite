@@ -40,12 +40,14 @@ interface AttendanceCalendarProps {
   month: Date;
   attendanceData: AttendanceRecord[];
   onDayClick?: (record: AttendanceRecord | null, date: Date) => void;
+  showWeeklySummary?: boolean;
 }
 
 export const AttendanceCalendar = ({ 
   month, 
   attendanceData,
-  onDayClick 
+  onDayClick,
+  showWeeklySummary = true
 }: AttendanceCalendarProps) => {
   
   // Generate calendar grid
@@ -157,7 +159,9 @@ export const AttendanceCalendar = ({
   return (
     <div className="w-full space-y-4">
       {/* Weekly Hours Summary */}
-      <WeeklyHoursSummary attendanceData={attendanceData} month={month} />
+      {showWeeklySummary && (
+        <WeeklyHoursSummary attendanceData={attendanceData} month={month} />
+      )}
       
       {/* Calendar Grid */}
       <div className="grid grid-cols-7 gap-1">
