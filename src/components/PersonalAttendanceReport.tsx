@@ -20,6 +20,11 @@ const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 
 export const PersonalAttendanceReport = () => {
   const { user, profile } = useAuth();
   const isStaff = profile?.role === 'staff';
+  
+  console.log('PersonalAttendanceReport - Profile:', profile);
+  console.log('PersonalAttendanceReport - Role:', profile?.role);
+  console.log('PersonalAttendanceReport - isStaff:', isStaff);
+  console.log('PersonalAttendanceReport - showWeeklySummary:', !isStaff);
   const currentDate = new Date();
   const [viewMode, setViewMode] = useState<'table' | 'calendar'>('calendar');
   const [selectedMonth, setSelectedMonth] = useState(currentDate);
