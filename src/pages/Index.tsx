@@ -3,9 +3,10 @@ import { Navigate } from "react-router-dom";
 import { Dashboard } from "@/components/Dashboard";
 import { AdminDashboard } from "@/components/AdminDashboard";
 import { LeaveManagement } from "@/components/LeaveManagement";
-import { Navigation, Breadcrumb } from "@/components/ui/navigation";
+import { Navigation } from "@/components/ui/navigation";
+import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
-import { Users, Calendar, Settings, BarChart, Menu, X, RefreshCw, FileText, ClipboardList, FlaskConical } from "lucide-react";
+import { Users, Calendar, Settings, BarChart, Menu, X, RefreshCw, FileText, ClipboardList, FlaskConical, Home } from "lucide-react";
 import { AdminEmails } from "@/pages/AdminEmails";
 import { AdminUsers } from "@/pages/AdminUsers";
 import { ClockInOutTestPage } from "@/pages/ClockInOutTestPage";
@@ -68,10 +69,9 @@ const Index = () => {
     ] : [])
   ];
 
-  const breadcrumbItems = [
-    { label: 'HRFlow' },
-    { label: navigationItems.find(item => item.id === activeTab)?.label || 'Dashboard' }
-  ];
+  const getCurrentPageLabel = () => {
+    return navigationItems.find(item => item.id === activeTab)?.label || 'Dashboard';
+  };
 
   const handleNavigationClick = (itemId: string) => {
     setActiveTab(itemId);
@@ -182,7 +182,22 @@ const Index = () => {
                   >
                     <Menu className="h-5 w-5" />
                   </Button>
-                  <Breadcrumb items={breadcrumbItems} />
+                  <Breadcrumb>
+                    <BreadcrumbList>
+                      <BreadcrumbItem>
+                        <BreadcrumbLink 
+                          className="cursor-pointer"
+                          onClick={() => setActiveTab('dashboard')}
+                        >
+                          <Home className="h-4 w-4" />
+                        </BreadcrumbLink>
+                      </BreadcrumbItem>
+                      <BreadcrumbSeparator />
+                      <BreadcrumbItem>
+                        <BreadcrumbPage>{getCurrentPageLabel()}</BreadcrumbPage>
+                      </BreadcrumbItem>
+                    </BreadcrumbList>
+                  </Breadcrumb>
                 </div>
               </div>
             </div>

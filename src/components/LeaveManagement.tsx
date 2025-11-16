@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { LeaveRequestsView } from "@/components/LeaveRequestsView";
 import { ExceptionApprovalQueue } from "@/components/ExceptionApprovalQueue";
 import { TeamAttendanceReport } from "@/components/TeamAttendanceReport";
@@ -118,6 +119,10 @@ export const LeaveManagement = ({ userRole }: LeaveManagementProps) => {
     setViewMode('tabs');
   };
 
+  const getSectionLabel = (sectionId: string) => {
+    return navigationTiles.find(tile => tile.id === sectionId)?.label || 'Leave Requests';
+  };
+
   return (
     <div className="space-y-6">
       {/* Header with View Toggle */}
@@ -147,6 +152,26 @@ export const LeaveManagement = ({ userRole }: LeaveManagementProps) => {
           )}
         </Button>
       </div>
+
+      {/* Breadcrumb for Tabs Mode */}
+      {viewMode === 'tabs' && (
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink 
+                className="cursor-pointer"
+                onClick={() => setViewMode('grid')}
+              >
+                Leave Management
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>{getSectionLabel(activeSection)}</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+      )}
 
       {/* Navigation Tabs */}
       <Tabs value={activeSection} onValueChange={setActiveSection} className="w-full">
