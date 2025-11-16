@@ -37,6 +37,21 @@ interface AttendanceRecord {
 }
 
 export const TeamAttendanceReport = () => {
+  // Helper function to parse hours from "X Hrs Y Mins" format
+  const parseHoursFromString = (hoursString: string): number => {
+    if (!hoursString || hoursString === '0 Hrs 0 Mins') return 0;
+    
+    // Match pattern "X Hrs Y Mins"
+    const hoursMatch = hoursString.match(/(\d+)\s*Hrs?/i);
+    const minsMatch = hoursString.match(/(\d+)\s*Mins?/i);
+    
+    const hours = hoursMatch ? parseInt(hoursMatch[1], 10) : 0;
+    const minutes = minsMatch ? parseInt(minsMatch[1], 10) : 0;
+    
+    // Convert to decimal hours
+    return hours + (minutes / 60);
+  };
+
   const [loading, setLoading] = useState(true);
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [startDate, setStartDate] = useState(format(new Date(), 'yyyy-MM-dd'));
@@ -422,8 +437,7 @@ export const TeamAttendanceReport = () => {
         new Date(`${record.work_date}T${record.actual_punch_out}`) : null;
       
       // Parse total hours from "X Hrs Y Mins" format
-      const totalHours = record.work_hours !== '0 Hrs 0 Mins' ? 
-        parseFloat(record.work_hours.replace(/[^\d.]/g, '')) || 0 : 0;
+      const totalHours = parseHoursFromString(record.work_hours);
       
       // Determine if it's a working day
       const isWorkingDay = record.comments !== 'WEEKEND' && !record.leave_type;
