@@ -4,7 +4,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { LeaveRequestsView } from "@/components/LeaveRequestsView";
 import { ExceptionApprovalQueue } from "@/components/ExceptionApprovalQueue";
-import { TeamAttendanceReport } from "@/components/TeamAttendanceReport";
 import { WorkScheduleManagement } from "@/components/WorkScheduleManagement";
 import { LeaveBalanceManagement } from "@/components/LeaveBalanceManagement";
 import { SettingsManagement } from "@/components/SettingsManagement";
@@ -34,14 +33,6 @@ const navigationTiles = [
     description: 'Review attendance exceptions',
     gradient: 'from-amber-500 to-amber-600',
     adminOnly: false
-  },
-  {
-    id: 'team-attendance',
-    label: 'Team Attendance',
-    icon: ClipboardList,
-    description: 'View team attendance reports',
-    gradient: 'from-purple-500 to-purple-600',
-    adminOnly: true
   },
   {
     id: 'work-schedules',
@@ -207,13 +198,6 @@ export const LeaveManagement = ({ userRole }: LeaveManagementProps) => {
             <TabsContent value="absences" className="mt-6">
               <ExceptionApprovalQueue />
             </TabsContent>
-
-            {/* Team Attendance Content */}
-            {userRole === 'admin' && (
-              <TabsContent value="team-attendance" className="mt-6">
-                <TeamAttendanceReport />
-              </TabsContent>
-            )}
 
             {/* Work Schedules Content */}
             {userRole === 'admin' && (
