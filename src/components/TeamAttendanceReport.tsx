@@ -14,8 +14,7 @@ import { Download, Calendar, CalendarDays, Search, X, Users, LayoutGrid } from '
 import { format, parse, isWeekend, addDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek, subDays, subMonths } from 'date-fns';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { AttendanceCalendarView } from './AttendanceCalendarView';
-import { DayStatus } from '@/hooks/useAttendanceCalendar';
+import { AttendanceCalendar } from './AttendanceCalendar';
 
 interface AttendanceRecord {
   employee_id: string;
@@ -409,38 +408,50 @@ export const TeamAttendanceReport = () => {
     return count;
   }, [searchTerm, selectedEmployee, selectedDepartment, selectedStatus]);
 
-  // Calendar view data
-  const calendarData = useMemo(() => {
-    if (viewMode !== 'calendar' || selectedEmployee === 'all') return null;
-
+  // Calendar view data - transform to AttendanceCalendar format
+  const calendarAttendanceData = useMemo(() => {
+    if (viewMode !== 'calendar' || selectedEmployee === 'all') return [];
+    
     const employeeRecords = filteredRecords.filter(r => r.employee_id === selectedEmployee);
-    const daysMap = new Map<string, DayStatus>();
-
-    employeeRecords.forEach(record => {
-      let status: 'present' | 'late' | 'absent' | 'future' | 'non-working' = 'non-working';
+    
+    return employeeRecords.map(record => {
+      // Parse times (they're already in string format HH:MM:SS)
+      const clockInTime = record.actual_punch_in ? 
+        new Date(`${record.work_date}T${record.actual_punch_in}`) : null;
+      const clockOutTime = record.actual_punch_out ? 
+        new Date(`${record.work_date}T${record.actual_punch_out}`) : null;
       
-      if (record.comments === 'WEEKEND' || record.leave_type) {
-        status = 'non-working';
-      } else if (record.status === 'absent') {
-        status = 'absent';
-      } else if (record.late_in !== '-') {
-        status = 'late';
-      } else if (record.status === 'present') {
-        status = 'present';
-      }
-
-      daysMap.set(record.work_date, {
+      // Parse total hours from "X Hrs Y Mins" format
+      const totalHours = record.work_hours !== '0 Hrs 0 Mins' ? 
+        parseFloat(record.work_hours.replace(/[^\d.]/g, '')) || 0 : 0;
+      
+      // Determine if it's a working day
+      const isWorkingDay = record.comments !== 'WEEKEND' && !record.leave_type;
+      
+      // Calculate late/early minutes
+      const lateMinutes = record.late_in !== '-' ? 
+        parseInt(record.late_in.replace(/[^\d]/g, '')) || 0 : 0;
+      const earlyMinutes = record.early_out !== '-' ? 
+        parseInt(record.early_out.replace(/[^\d]/g, '')) || 0 : 0;
+      
+      return {
+        id: `${record.employee_id}-${record.work_date}`,
         date: record.work_date,
-        status,
-        clockInTime: record.actual_punch_in,
-        clockOutTime: record.actual_punch_out,
-        totalHours: record.work_hours !== '0 Hrs 0 Mins' ? parseFloat(record.work_hours.replace(/[^\d.]/g, '')) : null,
-        isLate: record.late_in !== '-',
+        status: record.status,
+        clock_in_time: record.actual_punch_in,
+        clock_out_time: record.actual_punch_out,
+        total_hours: totalHours,
+        is_wfh: record.comments?.includes('WFH') || false,
         notes: record.comments,
-      });
+        dayOfWeek: record.day,
+        isWorkingDay,
+        lateMinutes,
+        earlyMinutes,
+        leaveType: record.leave_type,
+        clockInTime,
+        clockOutTime,
+      };
     });
-
-    return daysMap;
   }, [filteredRecords, selectedEmployee, viewMode]);
 
   const getRowColor = (record: AttendanceRecord) => {
@@ -853,7 +864,7 @@ export const TeamAttendanceReport = () => {
                     Please select a specific employee from the filters above to view their attendance calendar.
                   </p>
                 </div>
-              ) : calendarData && calendarData.size > 0 ? (
+              ) : calendarAttendanceData.length > 0 ? (
                 <div className="max-w-4xl mx-auto">
                   <div className="mb-4 p-4 bg-muted/30 rounded-lg border">
                     <h3 className="font-semibold text-lg mb-1">
@@ -863,20 +874,16 @@ export const TeamAttendanceReport = () => {
                       Employee ID: {uniqueEmployees.find(e => e.id === selectedEmployee)?.code}
                     </p>
                   </div>
-                  <AttendanceCalendarView
-                    selectedMonth={new Date(startDate)}
-                    days={calendarData}
-                    loading={false}
-                    onDayClick={(date) => {
-                      const dateStr = format(date, 'yyyy-MM-dd');
-                      const dayData = calendarData.get(dateStr);
-                      if (dayData) {
-                        const workHours = dayData.totalHours 
-                          ? `${Math.floor(dayData.totalHours)} Hrs ${Math.round((dayData.totalHours % 1) * 60)} Mins`
-                          : '0 Hrs 0 Mins';
-                        
-                        toast.info(`${format(date, 'PPP')}: ${dayData.status}`, {
-                          description: `Work Hours: ${workHours}${dayData.notes ? ` | ${dayData.notes}` : ''}`,
+                  <AttendanceCalendar
+                    month={new Date(startDate)}
+                    attendanceData={calendarAttendanceData}
+                    onDayClick={(record, date) => {
+                      if (record) {
+                        const workHours = record.total_hours 
+                          ? `${record.total_hours.toFixed(1)}h` 
+                          : '0h';
+                        toast.info(`${format(date, 'PPP')}`, {
+                          description: `Status: ${record.status} | Hours: ${workHours}`
                         });
                       }
                     }}
