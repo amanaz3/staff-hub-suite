@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Clock } from 'lucide-react';
 import { format, startOfWeek, endOfWeek, isWithinInterval, parseISO, isValid } from 'date-fns';
+import { useSystemSettings } from '@/hooks/useSystemSettings';
 
 interface AttendanceRecord {
   date: string;
@@ -22,6 +23,9 @@ interface WeekSummary {
 }
 
 export function WeeklyHoursSummary({ attendanceData, month }: WeeklyHoursSummaryProps) {
+  const { getDeductionInHours, settings } = useSystemSettings();
+  const deductionInHours = getDeductionInHours();
+
   const weeklySummaries = useMemo(() => {
     // Validate month prop
     if (!month || !isValid(month)) {
@@ -68,7 +72,11 @@ export function WeeklyHoursSummary({ attendanceData, month }: WeeklyHoursSummary
                record.total_hours !== undefined;
       });
       
-      const totalHours = weekRecords.reduce((sum, record) => sum + (record.total_hours || 0), 0);
+      const totalHours = weekRecords.reduce((sum, record) => {
+        const dailyHours = record.total_hours || 0;
+        const adjustedHours = Math.max(0, dailyHours - deductionInHours);
+        return sum + adjustedHours;
+      }, 0);
       const daysWorked = weekRecords.length;
       
       weeks.push({
@@ -91,7 +99,7 @@ export function WeeklyHoursSummary({ attendanceData, month }: WeeklyHoursSummary
     }
     
     return weeks;
-  }, [attendanceData, month]);
+  }, [attendanceData, month, deductionInHours]);
 
   const monthTotal = weeklySummaries.reduce((sum, week) => sum + week.totalHours, 0);
   const totalDaysWorked = weeklySummaries.reduce((sum, week) => sum + week.daysWorked, 0);
@@ -102,6 +110,11 @@ export function WeeklyHoursSummary({ attendanceData, month }: WeeklyHoursSummary
         <CardTitle className="flex items-center gap-2 text-lg">
           <Clock className="h-5 w-5" />
           Weekly Hours Summary
+          {settings?.enabled && (settings.hours > 0 || settings.minutes > 0) && (
+            <span className="text-xs text-muted-foreground font-normal">
+              (after deducting {settings.hours > 0 && `${settings.hours}h`} {settings.minutes > 0 && `${settings.minutes}m`} per day)
+            </span>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent>

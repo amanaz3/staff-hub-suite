@@ -15,6 +15,7 @@ import { format, parse, isWeekend, addDays, startOfMonth, endOfMonth, startOfWee
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { AttendanceCalendar } from './AttendanceCalendar';
+import { useSystemSettings } from '@/hooks/useSystemSettings';
 
 interface AttendanceRecord {
   employee_id: string;
@@ -37,6 +38,8 @@ interface AttendanceRecord {
 }
 
 export const TeamAttendanceReport = () => {
+  const { getDeductionInHours } = useSystemSettings();
+
   // Helper function to parse hours from "X Hrs Y Mins" format
   const parseHoursFromString = (hoursString: string): number => {
     if (!hoursString || hoursString === '0 Hrs 0 Mins') return 0;
@@ -437,7 +440,8 @@ export const TeamAttendanceReport = () => {
         new Date(`${record.work_date}T${record.actual_punch_out}`) : null;
       
       // Parse total hours from "X Hrs Y Mins" format
-      const totalHours = parseHoursFromString(record.work_hours);
+      const rawHours = parseHoursFromString(record.work_hours);
+      const totalHours = Math.max(0, rawHours - getDeductionInHours());
       
       // Determine if it's a working day
       const isWorkingDay = record.comments !== 'WEEKEND' && !record.leave_type;
