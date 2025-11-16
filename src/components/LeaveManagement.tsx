@@ -232,7 +232,7 @@ export const LeaveManagement = ({ userRole }: LeaveManagementProps) => {
             {/* Settings Content */}
             {userRole === 'admin' && (
               <TabsContent value="settings" className="mt-6">
-                <SettingsManagement />
+                <SettingsManagement userRole={userRole} />
               </TabsContent>
             )}
           </>

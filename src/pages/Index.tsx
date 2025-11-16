@@ -6,12 +6,10 @@ import { LeaveManagement } from "@/components/LeaveManagement";
 import { Navigation } from "@/components/ui/navigation";
 import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
-import { Users, Calendar, Settings, BarChart, Menu, X, RefreshCw, FileText, ClipboardList, FlaskConical, Home } from "lucide-react";
-import { AdminEmails } from "@/pages/AdminEmails";
-import { AdminUsers } from "@/pages/AdminUsers";
-import { ClockInOutTestPage } from "@/pages/ClockInOutTestPage";
+import { Users, Calendar, Settings, BarChart, Menu, X, RefreshCw, FileText, ClipboardList, Home } from "lucide-react";
 import { DocumentManagement } from "@/components/DocumentManagement";
 import { AttendanceReport } from "@/components/AttendanceReport";
+import { SettingsManagement } from "@/components/SettingsManagement";
 import { PersonalAttendanceReport } from "@/components/PersonalAttendanceReport";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
@@ -63,9 +61,7 @@ const Index = () => {
       { id: 'documents', label: 'Staff Documents', icon: FileText },
     ] : []),
     ...(profile?.role === 'admin' ? [
-      { id: 'users', label: 'User Management', icon: Users },
-      { id: 'clock-test', label: 'Clock-In/Out Test', icon: FlaskConical },
-      { id: 'emails', label: 'Test Emails', icon: Settings }
+      { id: 'settings', label: 'Settings', icon: Settings }
     ] : [])
   ];
 
@@ -250,19 +246,9 @@ const Index = () => {
             </div>
           )}
 
-          {activeTab === 'users' && (
+          {activeTab === 'settings' && (
             <div className="container mx-auto px-4 sm:px-6 py-8">
-              <AdminUsers />
-            </div>
-          )}
-
-          {activeTab === 'clock-test' && (
-            <ClockInOutTestPage />
-          )}
-
-          {activeTab === 'emails' && (
-            <div className="container mx-auto px-4 sm:px-6 py-8">
-              <AdminEmails />
+              <SettingsManagement userRole={profile.role} />
             </div>
           )}
         </main>
