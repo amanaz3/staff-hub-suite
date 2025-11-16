@@ -8,7 +8,7 @@ import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbP
 import { Button } from "@/components/ui/button";
 import { Users, Calendar, Settings, BarChart, Menu, X, RefreshCw, FileText, ClipboardList, Home } from "lucide-react";
 import { DocumentManagement } from "@/components/DocumentManagement";
-import { AttendanceReport } from "@/components/AttendanceReport";
+import { TeamAttendanceReport } from "@/components/TeamAttendanceReport";
 import { SettingsManagement } from "@/components/SettingsManagement";
 import { PersonalAttendanceReport } from "@/components/PersonalAttendanceReport";
 import { useAuth } from "@/hooks/useAuth";
@@ -236,7 +236,7 @@ const Index = () => {
 
           {activeTab === 'attendance' && (
             <div className="container mx-auto px-4 sm:px-6 py-8">
-              <AttendanceReport />
+              <TeamAttendanceReport />
             </div>
           )}
 
