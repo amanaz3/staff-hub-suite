@@ -23,16 +23,36 @@ interface WeekSummary {
 
 export function WeeklyHoursSummary({ attendanceData, month }: WeeklyHoursSummaryProps) {
   const weeklySummaries = useMemo(() => {
+    // Validate month prop
+    if (!month || !isValid(month)) {
+      return [];
+    }
+
     // Get all weeks in the month
     const monthStart = new Date(month.getFullYear(), month.getMonth(), 1);
     const monthEnd = new Date(month.getFullYear(), month.getMonth() + 1, 0);
     
+    // Validate calculated dates
+    if (!isValid(monthStart) || !isValid(monthEnd)) {
+      return [];
+    }
+    
     const weeks: WeekSummary[] = [];
     let currentDate = startOfWeek(monthStart, { weekStartsOn: 1 }); // Start from Monday
+    
+    // Validate starting date
+    if (!isValid(currentDate)) {
+      return [];
+    }
     
     while (currentDate <= monthEnd) {
       const weekStart = currentDate;
       const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
+      
+      // Validate week dates
+      if (!isValid(weekStart) || !isValid(weekEnd)) {
+        break;
+      }
       
       // Filter attendance records for this week
       const weekRecords = attendanceData.filter(record => {
@@ -58,9 +78,16 @@ export function WeeklyHoursSummary({ attendanceData, month }: WeeklyHoursSummary
         daysWorked,
       });
       
-      // Move to next week
-      currentDate = new Date(weekEnd);
-      currentDate.setDate(currentDate.getDate() + 1);
+      // Move to next week - use safer date arithmetic
+      const nextDate = new Date(weekEnd);
+      nextDate.setDate(nextDate.getDate() + 1);
+      
+      // Validate the next date before continuing
+      if (!isValid(nextDate)) {
+        break;
+      }
+      
+      currentDate = nextDate;
     }
     
     return weeks;
