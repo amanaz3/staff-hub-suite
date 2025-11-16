@@ -6,10 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { ExceptionRequestForm } from "@/components/ExceptionRequestForm";
 import { supabase } from "@/integrations/supabase/client";
 import { Calendar, Plus, Clock, CheckCircle, XCircle, AlertCircle, FileText } from "lucide-react";
 import { calculateServiceDuration, formatServiceDuration, isProbationCompleted } from "@/lib/utils";
@@ -30,7 +28,6 @@ export const LeaveRequestsView = ({ userRole }: LeaveRequestsViewProps) => {
   });
   const [employeeId, setEmployeeId] = useState<string>("");
   const [employeeData, setEmployeeData] = useState<any>(null);
-  const [attendanceExceptions, setAttendanceExceptions] = useState([]);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -56,16 +53,6 @@ export const LeaveRequestsView = ({ userRole }: LeaveRequestsViewProps) => {
         if (data && !error) {
           setEmployeeId(data.id);
           setEmployeeData(data);
-
-          const { data: exceptions, error: exceptionsError } = await supabase
-            .from('attendance_exceptions')
-            .select('*')
-            .eq('employee_id', data.id)
-            .order('created_at', { ascending: false });
-          
-          if (exceptions && !exceptionsError) {
-            setAttendanceExceptions(exceptions);
-          }
         }
       }
     };
@@ -471,134 +458,69 @@ export const LeaveRequestsView = ({ userRole }: LeaveRequestsViewProps) => {
         </div>
       )}
 
-      {/* My Attendance Exceptions (Staff only) */}
-      {userRole === 'staff' && attendanceExceptions.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <FileText className="h-5 w-5 mr-2 text-primary" />
-              My Attendance Exceptions
-            </CardTitle>
-            <CardDescription>
-              Your submitted attendance exception requests
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {attendanceExceptions.map((exception: any) => (
-                <div key={exception.id} className="border rounded-lg p-4 hover:shadow-sm transition-shadow">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-2">
-                      <div className="flex items-center space-x-3">
-                        {getStatusIcon(exception.status)}
-                        <div>
-                          <h4 className="font-medium text-foreground">
-                            {formatExceptionType(exception.exception_type)}
-                          </h4>
-                          <p className="text-sm text-muted-foreground">
-                            {exception.target_date ? formatDate(exception.target_date) : 'No date specified'}
-                          </p>
-                        </div>
-                      </div>
-                      
-                      {(exception.proposed_clock_in_time || exception.proposed_clock_out_time) && (
-                        <div className="text-sm text-muted-foreground">
-                          {exception.proposed_clock_in_time && <span>Clock In: {formatTime(exception.proposed_clock_in_time)}</span>}
-                          {exception.proposed_clock_in_time && exception.proposed_clock_out_time && <span className="mx-2">•</span>}
-                          {exception.proposed_clock_out_time && <span>Clock Out: {formatTime(exception.proposed_clock_out_time)}</span>}
-                        </div>
-                      )}
-                      
-                      <p className="text-sm text-muted-foreground">{exception.reason}</p>
-                      
-                      {exception.status === 'rejected' && exception.admin_comments && (
-                        <p className="text-sm text-red-600 dark:text-red-400 font-medium">
-                          Admin comments: {exception.admin_comments}
-                        </p>
-                      )}
-                    </div>
-                    {getStatusBadge(exception.status)}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* New Request Form */}
       {showNewRequest && userRole === 'staff' && (
         <Card>
           <CardHeader>
             <CardTitle>Submit New Request</CardTitle>
-            <CardDescription>Choose between leave request or attendance exception</CardDescription>
+            <CardDescription>Submit a new leave request for annual leave, sick leave, and other time-off</CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="leave" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="leave">Leave Request</TabsTrigger>
-                <TabsTrigger value="exception">Attendance Exception</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="leave" className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="leave-type">Leave Type *</Label>
-                  <Select value={newRequest.type} onValueChange={(value) => setNewRequest({ ...newRequest, type: value })}>
-                    <SelectTrigger id="leave-type">
-                      <SelectValue placeholder="Select leave type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {leaveTypes.map((type) => (
-                        <SelectItem key={type.id} value={type.id}>
-                          {type.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="leave-type">Leave Type *</Label>
+                <Select value={newRequest.type} onValueChange={(value) => setNewRequest({ ...newRequest, type: value })}>
+                  <SelectTrigger id="leave-type">
+                    <SelectValue placeholder="Select leave type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {leaveTypes.map((type) => (
+                      <SelectItem key={type.id} value={type.id}>
+                        {type.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="start-date">Start Date *</Label>
-                    <Input
-                      id="start-date"
-                      type="date"
-                      value={newRequest.startDate}
-                      onChange={(e) => setNewRequest({ ...newRequest, startDate: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="end-date">End Date *</Label>
-                    <Input
-                      id="end-date"
-                      type="date"
-                      value={newRequest.endDate}
-                      onChange={(e) => setNewRequest({ ...newRequest, endDate: e.target.value })}
-                    />
-                  </div>
-                </div>
-
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="reason">Reason *</Label>
-                  <Textarea
-                    id="reason"
-                    value={newRequest.reason}
-                    onChange={(e) => setNewRequest({ ...newRequest, reason: e.target.value })}
-                    placeholder="Please provide a detailed reason for your leave request"
-                    rows={4}
+                  <Label htmlFor="start-date">Start Date *</Label>
+                  <Input
+                    id="start-date"
+                    type="date"
+                    value={newRequest.startDate}
+                    onChange={(e) => setNewRequest({ ...newRequest, startDate: e.target.value })}
                   />
                 </div>
 
-                <div className="flex gap-2 justify-end">
-                  <Button variant="outline" onClick={() => setShowNewRequest(false)}>Cancel</Button>
-                  <Button onClick={handleSubmitRequest}>Submit Request</Button>
+                <div className="space-y-2">
+                  <Label htmlFor="end-date">End Date *</Label>
+                  <Input
+                    id="end-date"
+                    type="date"
+                    value={newRequest.endDate}
+                    onChange={(e) => setNewRequest({ ...newRequest, endDate: e.target.value })}
+                  />
                 </div>
-              </TabsContent>
+              </div>
 
-              <TabsContent value="exception">
-                <ExceptionRequestForm employeeId={employeeId} onSuccess={() => setShowNewRequest(false)} />
-              </TabsContent>
-            </Tabs>
+              <div className="space-y-2">
+                <Label htmlFor="reason">Reason *</Label>
+                <Textarea
+                  id="reason"
+                  value={newRequest.reason}
+                  onChange={(e) => setNewRequest({ ...newRequest, reason: e.target.value })}
+                  placeholder="Please provide a detailed reason for your leave request"
+                  rows={4}
+                />
+              </div>
+
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" onClick={() => setShowNewRequest(false)}>Cancel</Button>
+                <Button onClick={handleSubmitRequest}>Submit Request</Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}

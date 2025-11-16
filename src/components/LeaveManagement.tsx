@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { LeaveRequestsView } from "@/components/LeaveRequestsView";
 import { ExceptionApprovalQueue } from "@/components/ExceptionApprovalQueue";
+import { StaffAttendanceExceptions } from "@/components/StaffAttendanceExceptions";
 import { WorkScheduleManagement } from "@/components/WorkScheduleManagement";
 import { LeaveBalanceManagement } from "@/components/LeaveBalanceManagement";
 import { SettingsManagement } from "@/components/SettingsManagement";
@@ -194,10 +195,14 @@ export const LeaveManagement = ({ userRole }: LeaveManagementProps) => {
               <LeaveRequestsView userRole={userRole} />
             </TabsContent>
 
-            {/* Absences Content */}
-            <TabsContent value="absences" className="mt-6">
-              <ExceptionApprovalQueue />
-            </TabsContent>
+              {/* Absences Content */}
+              <TabsContent value="absences" className="mt-6">
+                {userRole === 'admin' ? (
+                  <ExceptionApprovalQueue />
+                ) : (
+                  <StaffAttendanceExceptions />
+                )}
+              </TabsContent>
 
             {/* Work Schedules Content */}
             {userRole === 'admin' && (
