@@ -8,10 +8,14 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-import { Download, Calendar, CalendarDays } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Download, Calendar, CalendarDays, Search, X, Users, LayoutGrid } from 'lucide-react';
 import { format, parse, isWeekend, addDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek, subDays, subMonths } from 'date-fns';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { AttendanceCalendarView } from './AttendanceCalendarView';
+import { DayStatus } from '@/hooks/useAttendanceCalendar';
 
 interface AttendanceRecord {
   employee_id: string;
@@ -40,6 +44,13 @@ export const TeamAttendanceReport = () => {
   const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [isStartDateOpen, setIsStartDateOpen] = useState(false);
   const [isEndDateOpen, setIsEndDateOpen] = useState(false);
+  
+  // Filter states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedEmployee, setSelectedEmployee] = useState<string>('all');
+  const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
+  const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [viewMode, setViewMode] = useState<'table' | 'calendar'>('table');
 
   useEffect(() => {
     fetchAttendanceData();
@@ -278,7 +289,7 @@ export const TeamAttendanceReport = () => {
 
       const csvContent = [
         headers.join(','),
-        ...records.map(r => [
+        ...filteredRecords.map(r => [
           r.employee_code,
           `"${r.employee_name}"`,
           `"${r.department}"`,
@@ -310,6 +321,128 @@ export const TeamAttendanceReport = () => {
     }
   };
 
+  // Get unique values for filters
+  const uniqueEmployees = useMemo(() => {
+    const employeeMap = new Map<string, { id: string; name: string; code: string }>();
+    records.forEach(r => {
+      if (!employeeMap.has(r.employee_id)) {
+        employeeMap.set(r.employee_id, { id: r.employee_id, name: r.employee_name, code: r.employee_code });
+      }
+    });
+    return Array.from(employeeMap.values()).sort((a, b) => a.code.localeCompare(b.code));
+  }, [records]);
+
+  const uniqueDepartments = useMemo(() => {
+    return Array.from(new Set(records.map(r => r.department))).sort();
+  }, [records]);
+
+  // Filter records
+  const filteredRecords = useMemo(() => {
+    return records.filter(record => {
+      // Search filter (name or employee ID)
+      const matchesSearch = searchTerm === '' || 
+        record.employee_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        record.employee_code.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      // Employee filter
+      const matchesEmployee = selectedEmployee === 'all' || 
+        record.employee_id === selectedEmployee;
+      
+      // Department filter
+      const matchesDepartment = selectedDepartment === 'all' || 
+        record.department === selectedDepartment;
+      
+      // Status filter
+      let matchesStatus = true;
+      if (selectedStatus !== 'all') {
+        switch (selectedStatus) {
+          case 'present':
+            matchesStatus = record.status === 'present' && record.late_in === '-';
+            break;
+          case 'late':
+            matchesStatus = record.late_in !== '-';
+            break;
+          case 'absent':
+            matchesStatus = record.status === 'absent';
+            break;
+          case 'leave':
+            matchesStatus = record.leave_type !== null;
+            break;
+          case 'weekend':
+            matchesStatus = record.comments === 'WEEKEND';
+            break;
+        }
+      }
+      
+      return matchesSearch && matchesEmployee && matchesDepartment && matchesStatus;
+    });
+  }, [records, searchTerm, selectedEmployee, selectedDepartment, selectedStatus]);
+
+  // Calculate statistics
+  const statistics = useMemo(() => {
+    const uniqueEmployeeIds = new Set(filteredRecords.map(r => r.employee_id));
+    const totalEmployees = uniqueEmployeeIds.size;
+    const present = filteredRecords.filter(r => r.status === 'present' && r.late_in === '-').length;
+    const late = filteredRecords.filter(r => r.late_in !== '-').length;
+    const absent = filteredRecords.filter(r => r.status === 'absent').length;
+    const onLeave = filteredRecords.filter(r => r.leave_type !== null).length;
+    const weekend = filteredRecords.filter(r => r.comments === 'WEEKEND').length;
+    
+    return { totalEmployees, present, late, absent, onLeave, weekend };
+  }, [filteredRecords]);
+
+  // Clear all filters
+  const clearFilters = () => {
+    setSearchTerm('');
+    setSelectedEmployee('all');
+    setSelectedDepartment('all');
+    setSelectedStatus('all');
+  };
+
+  // Active filter count
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (searchTerm) count++;
+    if (selectedEmployee !== 'all') count++;
+    if (selectedDepartment !== 'all') count++;
+    if (selectedStatus !== 'all') count++;
+    return count;
+  }, [searchTerm, selectedEmployee, selectedDepartment, selectedStatus]);
+
+  // Calendar view data
+  const calendarData = useMemo(() => {
+    if (viewMode !== 'calendar' || selectedEmployee === 'all') return null;
+
+    const employeeRecords = filteredRecords.filter(r => r.employee_id === selectedEmployee);
+    const daysMap = new Map<string, DayStatus>();
+
+    employeeRecords.forEach(record => {
+      let status: 'present' | 'late' | 'absent' | 'future' | 'non-working' = 'non-working';
+      
+      if (record.comments === 'WEEKEND' || record.leave_type) {
+        status = 'non-working';
+      } else if (record.status === 'absent') {
+        status = 'absent';
+      } else if (record.late_in !== '-') {
+        status = 'late';
+      } else if (record.status === 'present') {
+        status = 'present';
+      }
+
+      daysMap.set(record.work_date, {
+        date: record.work_date,
+        status,
+        clockInTime: record.actual_punch_in,
+        clockOutTime: record.actual_punch_out,
+        totalHours: record.work_hours !== '0 Hrs 0 Mins' ? parseFloat(record.work_hours.replace(/[^\d.]/g, '')) : null,
+        isLate: record.late_in !== '-',
+        notes: record.comments,
+      });
+    });
+
+    return daysMap;
+  }, [filteredRecords, selectedEmployee, viewMode]);
+
   const getRowColor = (record: AttendanceRecord) => {
     if (record.comments === 'WEEKEND') return 'bg-muted/30';
     if (record.leave_type) return 'bg-blue-50 dark:bg-blue-950/20';
@@ -338,10 +471,12 @@ export const TeamAttendanceReport = () => {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-2xl font-bold">Team Attendance Report</CardTitle>
-            <Button onClick={handleExport} variant="outline" size="sm">
-              <Download className="h-4 w-4 mr-2" />
-              Export CSV
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button onClick={handleExport} variant="outline" size="sm" disabled={filteredRecords.length === 0}>
+                <Download className="h-4 w-4 mr-2" />
+                Export CSV
+              </Button>
+            </div>
           </div>
           <div className="space-y-4 mt-4">
             {/* Preset Range Buttons */}
@@ -398,7 +533,7 @@ export const TeamAttendanceReport = () => {
             </div>
 
             {/* Date Range Selectors with Calendar Popups */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 flex-wrap">
               {/* Start Date */}
               <div className="flex items-center gap-2">
                 <CalendarDays className="h-4 w-4 text-muted-foreground" />
@@ -472,97 +607,292 @@ export const TeamAttendanceReport = () => {
                 Refresh
               </Button>
             </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="rounded-md border overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-24">Employee ID</TableHead>
-                  <TableHead className="min-w-[180px]">Employee Name</TableHead>
-                  <TableHead className="min-w-[150px]">Department</TableHead>
-                  <TableHead className="w-28">Work Date</TableHead>
-                  <TableHead className="w-24">Day</TableHead>
-                  <TableHead className="w-24">Actual In</TableHead>
-                  <TableHead className="w-24">Actual Out</TableHead>
-                  <TableHead className="w-24">Expected In</TableHead>
-                  <TableHead className="w-24">Expected Out</TableHead>
-                  <TableHead className="min-w-[120px]">Work Hours</TableHead>
-                  <TableHead className="w-24">Late In</TableHead>
-                  <TableHead className="w-24">Early Out</TableHead>
-                  <TableHead className="min-w-[200px]">Comments</TableHead>
-                  <TableHead className="w-24">Leave</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {records.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={14} className="text-center py-8 text-muted-foreground">
-                      No attendance records found for the selected date range
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  records.map((record, idx) => (
-                    <TableRow key={`${record.employee_id}_${record.work_date}`} className={getRowColor(record)}>
-                      <TableCell className="font-mono text-sm">{record.employee_code}</TableCell>
-                      <TableCell className="font-medium">{record.employee_name}</TableCell>
-                      <TableCell>{record.department}</TableCell>
-                      <TableCell>{format(new Date(record.work_date), 'dd-MMM-yyyy')}</TableCell>
-                      <TableCell className="font-medium">{record.day}</TableCell>
-                      <TableCell className="font-mono text-sm">{record.actual_punch_in || '-'}</TableCell>
-                      <TableCell className="font-mono text-sm">{record.actual_punch_out || '-'}</TableCell>
-                      <TableCell className="font-mono text-sm text-muted-foreground">{record.expected_start || '-'}</TableCell>
-                      <TableCell className="font-mono text-sm text-muted-foreground">{record.expected_end || '-'}</TableCell>
-                      <TableCell className="font-medium">{record.work_hours}</TableCell>
-                      <TableCell className={record.late_in !== '-' ? 'text-yellow-600 dark:text-yellow-400 font-medium' : ''}>
-                        {record.late_in}
-                      </TableCell>
-                      <TableCell className={record.early_out !== '-' ? 'text-orange-600 dark:text-orange-400 font-medium' : ''}>
-                        {record.early_out}
-                      </TableCell>
-                      <TableCell className="text-sm">{record.comments}</TableCell>
-                      <TableCell>
-                        {record.leave_type && (
-                          <Badge variant="secondary" className="text-xs">
-                            {record.leave_type}
-                          </Badge>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))
+
+            {/* Filters Section */}
+            <div className="border-t pt-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold flex items-center gap-2">
+                  <Search className="h-4 w-4" />
+                  Filters
+                  {activeFilterCount > 0 && (
+                    <Badge variant="secondary" className="ml-2">
+                      {activeFilterCount} active
+                    </Badge>
+                  )}
+                </h3>
+                {activeFilterCount > 0 && (
+                  <Button onClick={clearFilters} variant="ghost" size="sm">
+                    <X className="h-4 w-4 mr-1" />
+                    Clear All
+                  </Button>
                 )}
-              </TableBody>
-            </Table>
-          </div>
-          
-          {records.length > 0 && (
-            <div className="mt-4 text-sm text-muted-foreground">
-              <p>Total Records: {records.length}</p>
-              <div className="flex gap-4 mt-2 flex-wrap">
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 bg-muted/30 border"></div>
-                  <span>Weekend</span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                {/* Search Input */}
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Search</label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Name or Employee ID..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 bg-blue-50 dark:bg-blue-950/20 border"></div>
-                  <span>On Leave</span>
+
+                {/* Employee Filter */}
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Employee</label>
+                  <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All Employees" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Employees</SelectItem>
+                      {uniqueEmployees.map(emp => (
+                        <SelectItem key={emp.id} value={emp.id}>
+                          {emp.code} - {emp.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 bg-red-50 dark:bg-red-950/20 border"></div>
-                  <span>Absent</span>
+
+                {/* Department Filter */}
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Department</label>
+                  <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All Departments" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Departments</SelectItem>
+                      {uniqueDepartments.map(dept => (
+                        <SelectItem key={dept} value={dept}>
+                          {dept}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 bg-yellow-50 dark:bg-yellow-950/20 border"></div>
-                  <span>Late In</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 bg-orange-50 dark:bg-orange-950/20 border"></div>
-                  <span>Early Out</span>
+
+                {/* Status Filter */}
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Status</label>
+                  <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All Statuses" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Statuses</SelectItem>
+                      <SelectItem value="present">Present</SelectItem>
+                      <SelectItem value="late">Late In</SelectItem>
+                      <SelectItem value="absent">Absent</SelectItem>
+                      <SelectItem value="leave">On Leave</SelectItem>
+                      <SelectItem value="weekend">Weekend</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </div>
-          )}
+
+            {/* Statistics Summary */}
+            {filteredRecords.length > 0 && (
+              <div className="bg-muted/50 rounded-lg p-4 border">
+                <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-primary">{statistics.totalEmployees}</div>
+                    <div className="text-xs text-muted-foreground">Employees</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-600 dark:text-green-400">{statistics.present}</div>
+                    <div className="text-xs text-muted-foreground">Present</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{statistics.late}</div>
+                    <div className="text-xs text-muted-foreground">Late</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-red-600 dark:text-red-400">{statistics.absent}</div>
+                    <div className="text-xs text-muted-foreground">Absent</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{statistics.onLeave}</div>
+                    <div className="text-xs text-muted-foreground">On Leave</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-gray-600 dark:text-gray-400">{statistics.weekend}</div>
+                    <div className="text-xs text-muted-foreground">Weekend</div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {/* View Mode Tabs */}
+          <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'table' | 'calendar')} className="w-full">
+            <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 mb-4">
+              <TabsTrigger value="table">
+                <LayoutGrid className="h-4 w-4 mr-2" />
+                Table View
+              </TabsTrigger>
+              <TabsTrigger value="calendar">
+                <Users className="h-4 w-4 mr-2" />
+                Calendar View
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Table View */}
+            <TabsContent value="table" className="mt-0">
+              <div className="rounded-md border overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-24">Employee ID</TableHead>
+                      <TableHead className="min-w-[180px]">Employee Name</TableHead>
+                      <TableHead className="min-w-[150px]">Department</TableHead>
+                      <TableHead className="w-28">Work Date</TableHead>
+                      <TableHead className="w-24">Day</TableHead>
+                      <TableHead className="w-24">Actual In</TableHead>
+                      <TableHead className="w-24">Actual Out</TableHead>
+                      <TableHead className="w-24">Expected In</TableHead>
+                      <TableHead className="w-24">Expected Out</TableHead>
+                      <TableHead className="min-w-[120px]">Work Hours</TableHead>
+                      <TableHead className="w-24">Late In</TableHead>
+                      <TableHead className="w-24">Early Out</TableHead>
+                      <TableHead className="min-w-[200px]">Comments</TableHead>
+                      <TableHead className="w-24">Leave</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredRecords.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={14} className="text-center py-8 text-muted-foreground">
+                          {records.length === 0 
+                            ? 'No attendance records found for the selected date range'
+                            : 'No records match the selected filters'}
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredRecords.map((record, idx) => (
+                        <TableRow key={`${record.employee_id}_${record.work_date}`} className={getRowColor(record)}>
+                          <TableCell className="font-mono text-sm">{record.employee_code}</TableCell>
+                          <TableCell className="font-medium">{record.employee_name}</TableCell>
+                          <TableCell>{record.department}</TableCell>
+                          <TableCell>{format(new Date(record.work_date), 'dd-MMM-yyyy')}</TableCell>
+                          <TableCell className="font-medium">{record.day}</TableCell>
+                          <TableCell className="font-mono text-sm">{record.actual_punch_in || '-'}</TableCell>
+                          <TableCell className="font-mono text-sm">{record.actual_punch_out || '-'}</TableCell>
+                          <TableCell className="font-mono text-sm text-muted-foreground">{record.expected_start || '-'}</TableCell>
+                          <TableCell className="font-mono text-sm text-muted-foreground">{record.expected_end || '-'}</TableCell>
+                          <TableCell className="font-medium">{record.work_hours}</TableCell>
+                          <TableCell className={record.late_in !== '-' ? 'text-yellow-600 dark:text-yellow-400 font-medium' : ''}>
+                            {record.late_in}
+                          </TableCell>
+                          <TableCell className={record.early_out !== '-' ? 'text-orange-600 dark:text-orange-400 font-medium' : ''}>
+                            {record.early_out}
+                          </TableCell>
+                          <TableCell className="text-sm">{record.comments}</TableCell>
+                          <TableCell>
+                            {record.leave_type && (
+                              <Badge variant="secondary" className="text-xs">
+                                {record.leave_type}
+                              </Badge>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+              
+              {filteredRecords.length > 0 && (
+                <div className="mt-4 text-sm text-muted-foreground">
+                  <p>
+                    Showing {filteredRecords.length} of {records.length} records
+                    {activeFilterCount > 0 && ` (${activeFilterCount} filter${activeFilterCount > 1 ? 's' : ''} applied)`}
+                  </p>
+                  <div className="flex gap-4 mt-2 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 bg-muted/30 border"></div>
+                      <span>Weekend</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 bg-blue-50 dark:bg-blue-950/20 border"></div>
+                      <span>On Leave</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 bg-red-50 dark:bg-red-950/20 border"></div>
+                      <span>Absent</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 bg-yellow-50 dark:bg-yellow-950/20 border"></div>
+                      <span>Late In</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 bg-orange-50 dark:bg-orange-950/20 border"></div>
+                      <span>Early Out</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Calendar View */}
+            <TabsContent value="calendar" className="mt-0">
+              {selectedEmployee === 'all' ? (
+                <div className="text-center py-12 px-4">
+                  <Users className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Select an Employee</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Please select a specific employee from the filters above to view their attendance calendar.
+                  </p>
+                </div>
+              ) : calendarData && calendarData.size > 0 ? (
+                <div className="max-w-4xl mx-auto">
+                  <div className="mb-4 p-4 bg-muted/30 rounded-lg border">
+                    <h3 className="font-semibold text-lg mb-1">
+                      {uniqueEmployees.find(e => e.id === selectedEmployee)?.name}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Employee ID: {uniqueEmployees.find(e => e.id === selectedEmployee)?.code}
+                    </p>
+                  </div>
+                  <AttendanceCalendarView
+                    selectedMonth={new Date(startDate)}
+                    days={calendarData}
+                    loading={false}
+                    onDayClick={(date) => {
+                      const dateStr = format(date, 'yyyy-MM-dd');
+                      const dayData = calendarData.get(dateStr);
+                      if (dayData) {
+                        const workHours = dayData.totalHours 
+                          ? `${Math.floor(dayData.totalHours)} Hrs ${Math.round((dayData.totalHours % 1) * 60)} Mins`
+                          : '0 Hrs 0 Mins';
+                        
+                        toast.info(`${format(date, 'PPP')}: ${dayData.status}`, {
+                          description: `Work Hours: ${workHours}${dayData.notes ? ` | ${dayData.notes}` : ''}`,
+                        });
+                      }
+                    }}
+                  />
+                </div>
+              ) : (
+                <div className="text-center py-12 px-4">
+                  <Calendar className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No Attendance Data</h3>
+                  <p className="text-muted-foreground">
+                    No attendance records found for the selected employee in this date range.
+                  </p>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
     </div>
