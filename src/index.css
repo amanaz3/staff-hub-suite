@@ -343,6 +343,15 @@
     @apply absolute bottom-0 right-0 text-xs;
   }
 
+  .attendance-calendar .rdp-day.non-working {
+    @apply bg-gray-100 text-gray-500 border-2 border-gray-200 cursor-not-allowed;
+  }
+
+  .attendance-calendar .rdp-day.non-working::after {
+    content: "🏖️";
+    @apply absolute bottom-0 right-0 text-xs;
+  }
+
   .attendance-calendar .rdp-day.rdp-day_today {
     @apply ring-2 ring-primary ring-offset-2 font-bold;
   }
