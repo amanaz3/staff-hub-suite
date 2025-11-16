@@ -29,6 +29,7 @@ export function AttendanceCalendarView({
   const lateDays: Date[] = [];
   const absentDays: Date[] = [];
   const futureDays: Date[] = [];
+  const nonWorkingDays: Date[] = [];
 
   days.forEach((dayStatus, dateStr) => {
     const date = parseISO(dateStr);
@@ -45,6 +46,9 @@ export function AttendanceCalendarView({
       case 'future':
         futureDays.push(date);
         break;
+      case 'non-working':
+        nonWorkingDays.push(date);
+        break;
     }
   });
 
@@ -58,12 +62,14 @@ export function AttendanceCalendarView({
           late: lateDays,
           absent: absentDays,
           future: futureDays,
+          nonWorking: nonWorkingDays,
         }}
         modifiersClassNames={{
           present: 'present',
           late: 'late',
           absent: 'absent',
           future: 'future',
+          nonWorking: 'non-working',
         }}
         onDayClick={onDayClick}
         disabled={(date) => {
