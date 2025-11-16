@@ -108,7 +108,9 @@ export function useAttendanceCalendar(employeeId: string | undefined, selectedMo
 
           // Check if working day
           const dayName = format(day, 'EEEE');
-          const isWorkingDay = schedule?.working_days?.includes(dayName) ?? true;
+          // Default working days: Monday-Saturday (Sunday is weekend)
+          const defaultWorkingDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+          const isWorkingDay = schedule?.working_days?.includes(dayName) ?? defaultWorkingDays.includes(dayName);
 
           if (!isWorkingDay) {
             dayStatusMap.set(dateStr, {
