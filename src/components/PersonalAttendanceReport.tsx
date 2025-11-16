@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Download, Calendar as CalendarIcon, List, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Download, Calendar as CalendarIcon, List, ChevronLeft, ChevronRight, CheckCircle, Clock, AlertCircle, Timer } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, getDay, differenceInMinutes, addMonths, subMonths } from 'date-fns';
 import { toast } from 'sonner';
 import { toGST, formatInGST, createGSTDate } from '@/lib/timezone';
@@ -309,10 +309,13 @@ export const PersonalAttendanceReport = () => {
   return (
     <div className="space-y-6">
       {/* Summary Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Working Days</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Working Days</CardTitle>
+              <CalendarIcon className="h-5 w-5 text-muted-foreground" />
+            </div>
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">{summary.totalWorkingDays}</p>
@@ -320,32 +323,44 @@ export const PersonalAttendanceReport = () => {
         </Card>
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Days Present</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Days Present</CardTitle>
+              <CheckCircle className="h-5 w-5 text-[hsl(var(--status-present))]" />
+            </div>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold text-green-600 dark:text-green-400">{summary.daysPresent}</p>
+            <p className="text-2xl font-bold text-[hsl(var(--status-present))]">{summary.daysPresent}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Days Late</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Days Late</CardTitle>
+              <Clock className="h-5 w-5 text-[hsl(var(--status-late))]" />
+            </div>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{summary.daysLate}</p>
+            <p className="text-2xl font-bold text-[hsl(var(--status-late))]">{summary.daysLate}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Early Departures</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Early Departures</CardTitle>
+              <AlertCircle className="h-5 w-5 text-[hsl(var(--warning))]" />
+            </div>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{summary.daysEarly}</p>
+            <p className="text-2xl font-bold text-[hsl(var(--warning))]">{summary.daysEarly}</p>
           </CardContent>
         </Card>
         {!isStaff && (
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Hours</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Total Hours</CardTitle>
+                <Timer className="h-5 w-5 text-muted-foreground" />
+              </div>
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-bold">{formatTotalHours(parseFloat(summary.totalHours))}</p>
