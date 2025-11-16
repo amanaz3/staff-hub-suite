@@ -4,7 +4,8 @@ import { AttendanceNotificationLog } from './AttendanceNotificationLog';
 import { UserManagement } from './UserManagement';
 import { ClockInOutTest } from './ClockInOutTest';
 import { TestEmailManagement } from './TestEmailManagement';
-import { Shield, Bell, Users, FlaskConical, Mail } from 'lucide-react';
+import { HoursDeductionSettings } from './HoursDeductionSettings';
+import { Shield, Bell, Users, FlaskConical, Mail, Clock } from 'lucide-react';
 
 interface SettingsManagementProps {
   userRole: 'admin' | 'staff' | 'manager';
@@ -13,7 +14,7 @@ interface SettingsManagementProps {
 export const SettingsManagement = ({ userRole }: SettingsManagementProps) => {
   return (
     <Tabs defaultValue="ip-management" className="w-full">
-      <TabsList className="grid w-full grid-cols-5">
+      <TabsList className="grid w-full grid-cols-6">
         <TabsTrigger value="ip-management">
           <Shield className="h-4 w-4 mr-2" />
           IP Management
@@ -25,6 +26,10 @@ export const SettingsManagement = ({ userRole }: SettingsManagementProps) => {
         <TabsTrigger value="user-management">
           <Users className="h-4 w-4 mr-2" />
           User Management
+        </TabsTrigger>
+        <TabsTrigger value="hours-settings">
+          <Clock className="h-4 w-4 mr-2" />
+          Hours Settings
         </TabsTrigger>
         <TabsTrigger value="clock-test">
           <FlaskConical className="h-4 w-4 mr-2" />
@@ -46,6 +51,10 @@ export const SettingsManagement = ({ userRole }: SettingsManagementProps) => {
 
       <TabsContent value="user-management" className="mt-6">
         <UserManagement />
+      </TabsContent>
+
+      <TabsContent value="hours-settings" className="mt-6">
+        <HoursDeductionSettings />
       </TabsContent>
 
       <TabsContent value="clock-test" className="mt-6">
