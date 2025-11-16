@@ -367,58 +367,95 @@ export const LeaveRequestsView = ({ userRole }: LeaveRequestsViewProps) => {
         )}
       </div>
 
-      {/* Plan Balances (Staff only) */}
+      {/* Employment Status & Leave Balances (Staff only) */}
       {userRole === 'staff' && employeeData && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-2xl text-muted-foreground">Plan Balances</CardTitle>
-              <div className="flex items-center gap-2">
-                <Label className="text-sm font-medium text-muted-foreground">Balance As-of Date</Label>
-                <Select defaultValue="current">
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Select date" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="current">Current date</SelectItem>
-                  </SelectContent>
-                </Select>
+        <div className="grid gap-4 md:grid-cols-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium">Service Duration</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-foreground">
+                {formatServiceDuration(
+                  calculateServiceDuration(employeeData.hire_date).years,
+                  calculateServiceDuration(employeeData.hire_date).months
+                )}
               </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {/* Annual Leave */}
-              <div className="flex items-center justify-between py-3 border-b border-border">
-                <p className="text-base font-medium text-muted-foreground">Annual Incremental Plan</p>
-                <p className="text-2xl font-normal text-foreground">{leaveBalances.annual.remaining} Days</p>
-              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Since {formatDate(employeeData.hire_date)}
+              </p>
+            </CardContent>
+          </Card>
 
-              {/* Sick Leave */}
-              <div className="flex items-center justify-between py-3 border-b border-border">
-                <p className="text-base font-medium text-muted-foreground">Study Leave Plan</p>
-                <p className="text-2xl font-normal text-foreground">{leaveBalances.sick.remaining} Days</p>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium flex items-center">
+                <Calendar className="h-4 w-4 mr-2 text-blue-500" />
+                Annual Leave
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <div className="text-2xl font-bold text-foreground">{leaveBalances.annual.remaining}</div>
+                <div className="text-xs text-muted-foreground">
+                  {leaveBalances.annual.used} used • {leaveBalances.annual.total} total
+                </div>
+                <div className="w-full bg-muted rounded-full h-2">
+                  <div 
+                    className="bg-blue-500 h-2 rounded-full transition-all duration-300" 
+                    style={{ width: `${(leaveBalances.annual.used / leaveBalances.annual.total) * 100}%` }}
+                  />
+                </div>
               </div>
+            </CardContent>
+          </Card>
 
-              {/* Personal Leave */}
-              <div className="flex items-center justify-between py-3 border-b border-border">
-                <p className="text-base font-medium text-muted-foreground">ADIB Day Off Accrual</p>
-                <p className="text-2xl font-normal text-foreground">{leaveBalances.personal.remaining} Calendar Days</p>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium flex items-center">
+                <AlertCircle className="h-4 w-4 mr-2 text-red-500" />
+                Sick Leave
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <div className="text-2xl font-bold text-foreground">{leaveBalances.sick.remaining}</div>
+                <div className="text-xs text-muted-foreground">
+                  {leaveBalances.sick.used} used • {leaveBalances.sick.total} total
+                </div>
+                <div className="w-full bg-muted rounded-full h-2">
+                  <div 
+                    className="bg-red-500 h-2 rounded-full transition-all duration-300" 
+                    style={{ width: `${(leaveBalances.sick.used / leaveBalances.sick.total) * 100}%` }}
+                  />
+                </div>
               </div>
+            </CardContent>
+          </Card>
 
-              {/* Additional Leave Types */}
-              <div className="flex items-center justify-between py-3 border-b border-border">
-                <p className="text-base font-medium text-muted-foreground">Offsite and in Lieu Leave Balance Plan</p>
-                <p className="text-2xl font-normal text-foreground">0 Calendar Days</p>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium flex items-center">
+                <FileText className="h-4 w-4 mr-2 text-primary" />
+                Personal Leave
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <div className="text-2xl font-bold text-foreground">{leaveBalances.personal.remaining}</div>
+                <div className="text-xs text-muted-foreground">
+                  {leaveBalances.personal.used} used • {leaveBalances.personal.total} total
+                </div>
+                <div className="w-full bg-muted rounded-full h-2">
+                  <div 
+                    className="bg-primary h-2 rounded-full transition-all duration-300" 
+                    style={{ width: `${(leaveBalances.personal.used / leaveBalances.personal.total) * 100}%` }}
+                  />
+                </div>
               </div>
-
-              <div className="flex items-center justify-between py-3">
-                <p className="text-base font-medium text-muted-foreground">Work From Home Plan</p>
-                <p className="text-2xl font-normal text-foreground">15 Calendar Days</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {/* New Request Form */}
