@@ -8,7 +8,7 @@ import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbP
 import { Button } from "@/components/ui/button";
 import { Users, Calendar, Settings, BarChart, Menu, X, RefreshCw, FileText, ClipboardList, Home } from "lucide-react";
 import { DocumentManagement } from "@/components/DocumentManagement";
-
+import { AttendanceReport } from "@/components/AttendanceReport";
 import { SettingsManagement } from "@/components/SettingsManagement";
 import { PersonalAttendanceReport } from "@/components/PersonalAttendanceReport";
 import { useAuth } from "@/hooks/useAuth";
@@ -57,6 +57,7 @@ const Index = () => {
     { id: 'my-attendance', label: 'My Attendance', icon: ClipboardList },
     { id: 'leaves', label: 'Leave Management', icon: Calendar },
     ...(profile?.role === 'admin' || profile?.role === 'manager' ? [
+      { id: 'attendance', label: 'Team Attendance', icon: FileText },
       { id: 'documents', label: 'Staff Documents', icon: FileText },
     ] : []),
     ...(profile?.role === 'admin' ? [
@@ -230,6 +231,12 @@ const Index = () => {
           {activeTab === 'my-attendance' && (
             <div className="container mx-auto px-4 sm:px-6 py-8">
               <PersonalAttendanceReport />
+            </div>
+          )}
+
+          {activeTab === 'attendance' && (
+            <div className="container mx-auto px-4 sm:px-6 py-8">
+              <AttendanceReport />
             </div>
           )}
 
