@@ -5,7 +5,8 @@ import { UserManagement } from './UserManagement';
 import { ClockInOutTest } from './ClockInOutTest';
 import { TestEmailManagement } from './TestEmailManagement';
 import { HoursDeductionSettings } from './HoursDeductionSettings';
-import { Shield, Bell, Users, FlaskConical, Mail, Clock } from 'lucide-react';
+import { PayrollAdminManagement } from './PayrollAdminManagement';
+import { Shield, Bell, Users, FlaskConical, Mail, Clock, DollarSign } from 'lucide-react';
 
 interface SettingsManagementProps {
   userRole: 'admin' | 'staff' | 'manager';
@@ -14,7 +15,7 @@ interface SettingsManagementProps {
 export const SettingsManagement = ({ userRole }: SettingsManagementProps) => {
   return (
     <Tabs defaultValue="ip-management" className="w-full">
-      <TabsList className="grid w-full grid-cols-6">
+      <TabsList className="grid w-full grid-cols-7">
         <TabsTrigger value="ip-management">
           <Shield className="h-4 w-4 mr-2" />
           IP Management
@@ -38,6 +39,10 @@ export const SettingsManagement = ({ userRole }: SettingsManagementProps) => {
         <TabsTrigger value="test-emails">
           <Mail className="h-4 w-4 mr-2" />
           Test Emails
+        </TabsTrigger>
+        <TabsTrigger value="payroll-admin">
+          <DollarSign className="h-4 w-4 mr-2" />
+          Payroll
         </TabsTrigger>
       </TabsList>
       
@@ -63,6 +68,10 @@ export const SettingsManagement = ({ userRole }: SettingsManagementProps) => {
 
       <TabsContent value="test-emails" className="mt-6">
         <TestEmailManagement />
+      </TabsContent>
+
+      <TabsContent value="payroll-admin" className="mt-6">
+        <PayrollAdminManagement />
       </TabsContent>
     </Tabs>
   );
