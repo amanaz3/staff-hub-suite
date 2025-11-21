@@ -26,6 +26,20 @@
     --primary-light: 220 40% 35%;
     --primary-dark: 220 80% 10%;
 
+    /* Teal hero colors */
+    --teal-50: 166 76% 97%;
+    --teal-100: 167 85% 89%;
+    --teal-600: 175 84% 32%;
+    --teal-700: 175 77% 26%;
+    --teal-800: 176 69% 22%;
+    --teal-900: 176 61% 19%;
+
+    /* Slate colors for header */
+    --slate-50: 210 40% 98%;
+    --slate-700: 215 25% 27%;
+    --slate-800: 217 33% 17%;
+    --slate-900: 222 47% 11%;
+
     /* Secondary palette - Light purple tones */
     --secondary: 260 15% 96%;
     --secondary-foreground: 220 60% 15%;
