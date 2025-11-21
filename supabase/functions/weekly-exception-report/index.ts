@@ -82,6 +82,7 @@ interface DailyIssue {
 
 interface EmployeeReport {
   employeeId: string;
+  userId: string;
   employeeName: string;
   employeeEmail: string;
   dailyIssues: DailyIssue[];
@@ -133,6 +134,7 @@ const handler = async (req: Request): Promise<Response> => {
       .from('employees')
       .select(`
         id,
+        user_id,
         full_name,
         email,
         manager_id,
@@ -338,6 +340,7 @@ const handler = async (req: Request): Promise<Response> => {
 
         employeeReports.push({
           employeeId: employee.id,
+          userId: employee.user_id,
           employeeName: employee.full_name,
           employeeEmail: employee.email,
           dailyIssues,
@@ -380,16 +383,9 @@ const handler = async (req: Request): Promise<Response> => {
 
         // Create in-app notification
         try {
-          // Get user_id from employee
-          const { data: employee } = await supabase
-            .from('employees')
-            .select('user_id')
-            .eq('id', report.employeeId)
-            .single();
-
-          if (employee?.user_id) {
+          if (report.userId) {
             await supabase.rpc('create_in_app_notification', {
-              p_user_id: employee.user_id,
+              p_user_id: report.userId,
               p_employee_id: report.employeeId,
               p_notification_type: 'attendance',
               p_title: 'Weekly Attendance Summary',
