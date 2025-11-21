@@ -671,6 +671,93 @@ export type Database = {
         }
         Relationships: []
       }
+      payroll_records: {
+        Row: {
+          allowances: number
+          created_at: string
+          created_by: string | null
+          deductions_insurance: number
+          deductions_other: number
+          deductions_pension: number
+          deductions_tax: number
+          employee_id: string
+          fixed_salary: number
+          gross_pay: number
+          id: string
+          net_pay: number
+          notes: string | null
+          pay_period_end: string
+          pay_period_start: string
+          payment_date: string
+          payslip_pdf_url: string | null
+          status: string
+          total_deductions: number
+          updated_at: string
+          variable_salary: number
+        }
+        Insert: {
+          allowances?: number
+          created_at?: string
+          created_by?: string | null
+          deductions_insurance?: number
+          deductions_other?: number
+          deductions_pension?: number
+          deductions_tax?: number
+          employee_id: string
+          fixed_salary?: number
+          gross_pay?: number
+          id?: string
+          net_pay?: number
+          notes?: string | null
+          pay_period_end: string
+          pay_period_start: string
+          payment_date: string
+          payslip_pdf_url?: string | null
+          status?: string
+          total_deductions?: number
+          updated_at?: string
+          variable_salary?: number
+        }
+        Update: {
+          allowances?: number
+          created_at?: string
+          created_by?: string | null
+          deductions_insurance?: number
+          deductions_other?: number
+          deductions_pension?: number
+          deductions_tax?: number
+          employee_id?: string
+          fixed_salary?: number
+          gross_pay?: number
+          id?: string
+          net_pay?: number
+          notes?: string | null
+          pay_period_end?: string
+          pay_period_start?: string
+          payment_date?: string
+          payslip_pdf_url?: string | null
+          status?: string
+          total_deductions?: number
+          updated_at?: string
+          variable_salary?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_records_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employee_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_records_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
