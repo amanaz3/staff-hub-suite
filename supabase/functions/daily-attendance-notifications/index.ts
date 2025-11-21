@@ -60,6 +60,7 @@ interface AttendanceIssue {
 
 interface EmployeeNotification {
   employee_id: string;
+  user_id: string;
   employee_name: string;
   email: string;
   issues: AttendanceIssue[];
@@ -88,6 +89,7 @@ const handler = async (req: Request): Promise<Response> => {
       .from('employees')
       .select(`
         id,
+        user_id,
         full_name,
         email,
         work_schedules!inner(
@@ -208,6 +210,7 @@ const handler = async (req: Request): Promise<Response> => {
       if (issues.length > 0) {
         notifications.push({
           employee_id: employee.id,
+          user_id: employee.user_id,
           employee_name: employee.full_name,
           email: employee.email,
           issues
