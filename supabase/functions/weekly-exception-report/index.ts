@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 import { Resend } from "npm:resend@2.0.0";
-import { nowInGST, getDayName, isWorkingDay, formatTime12Hour } from '../_shared/timezone.ts';
+import { nowInGST, getDayName, isWorkingDay, formatTimeInGST } from '../_shared/timezone.ts';
 
 // Helper function to format time from database time string
 function formatTimeString(timeStr: string): string {
@@ -253,7 +253,7 @@ const handler = async (req: Request): Promise<Response> => {
               type: 'late',
               details: {
                 late_hours: lateHours,
-                clock_in_time: formatTime12Hour(clockIn),
+                clock_in_time: formatTimeInGST(clockIn),
                 scheduled_start: formatTimeString(schedule.start_time)
               },
               exceptionSubmitted,
@@ -268,7 +268,7 @@ const handler = async (req: Request): Promise<Response> => {
             issues.push({
               type: 'missed_clock_out',
               details: {
-                clock_in_time: formatTime12Hour(clockIn)
+                clock_in_time: formatTimeInGST(clockIn)
               },
               exceptionSubmitted,
               exceptionType: submittedExceptions.find((ex: any) => ex.exception_type === 'missed_clock_out')?.exception_type,
@@ -286,7 +286,7 @@ const handler = async (req: Request): Promise<Response> => {
                 type: 'early',
                 details: {
                   early_hours: earlyHours,
-                  clock_out_time: formatTime12Hour(clockOut),
+                  clock_out_time: formatTimeInGST(clockOut),
                   scheduled_end: formatTimeString(schedule.end_time)
                 },
                 exceptionSubmitted,
