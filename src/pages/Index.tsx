@@ -6,11 +6,13 @@ import { LeaveManagement } from "@/components/LeaveManagement";
 import { Navigation } from "@/components/ui/navigation";
 import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
-import { Users, Calendar, Settings, BarChart, Menu, X, RefreshCw, FileText, ClipboardList, Home } from "lucide-react";
+import { Users, Calendar, Settings, BarChart, Menu, X, RefreshCw, FileText, ClipboardList, Home, User, Wallet } from "lucide-react";
 import { DocumentManagement } from "@/components/DocumentManagement";
 import { TeamAttendanceReport } from "@/components/TeamAttendanceReport";
 import { SettingsManagement } from "@/components/SettingsManagement";
 import { PersonalAttendanceReport } from "@/components/PersonalAttendanceReport";
+import { PayrollManagement } from "@/components/PayrollManagement";
+import EmployeeProfile from "@/pages/EmployeeProfile";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 
@@ -54,8 +56,10 @@ const Index = () => {
 
   const navigationItems = [
     { id: 'dashboard', label: 'Dashboard', icon: BarChart },
+    { id: 'profile', label: 'Profile', icon: User },
     { id: 'my-attendance', label: 'My Attendance', icon: ClipboardList },
     { id: 'leaves', label: 'Leave Management', icon: Calendar },
+    { id: 'payroll', label: 'Payroll', icon: Wallet },
     ...(profile?.role === 'admin' || profile?.role === 'manager' ? [
       { id: 'attendance', label: 'Team Attendance', icon: FileText },
       { id: 'documents', label: 'Staff Documents', icon: FileText },
@@ -249,6 +253,18 @@ const Index = () => {
           {activeTab === 'settings' && (
             <div className="container mx-auto px-4 sm:px-6 py-8">
               <SettingsManagement userRole={profile.role} />
+            </div>
+          )}
+
+          {activeTab === 'profile' && (
+            <div className="container mx-auto px-4 sm:px-6 py-8">
+              <EmployeeProfile embedded={true} />
+            </div>
+          )}
+
+          {activeTab === 'payroll' && (
+            <div className="container mx-auto px-4 sm:px-6 py-8">
+              <PayrollManagement />
             </div>
           )}
         </main>
