@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { generatePayslipPDF } from "@/lib/generatePayslip";
 import {
   DollarSign,
   Upload,
@@ -232,8 +233,56 @@ export const PayrollAdminManagement = () => {
     mutationFn: async () => {
       const { data: userData } = await supabase.auth.getUser();
 
+      // Get employee details for PDF generation
+      const employee = employees.find((e) => e.id === formData.employee_id);
+      if (!employee) throw new Error("Employee not found");
+
+      // Calculate totals for PDF
+      const calculatedGrossPay =
+        formData.fixed_salary + formData.variable_salary + formData.allowances;
+      const calculatedTotalDeductions =
+        formData.deductions_tax +
+        formData.deductions_insurance +
+        formData.deductions_pension +
+        formData.deductions_other;
+      const calculatedNetPay = calculatedGrossPay - calculatedTotalDeductions;
+
       let payslipUrl = null;
-      if (selectedFile) {
+
+      // If no file uploaded, generate PDF automatically
+      if (!selectedFile) {
+        const pdfBlob = generatePayslipPDF({
+          employeeName: employee.full_name,
+          employeeId: employee.employee_id,
+          email: employee.email,
+          payPeriodStart: formData.pay_period_start,
+          payPeriodEnd: formData.pay_period_end,
+          paymentDate: formData.payment_date,
+          fixedSalary: formData.fixed_salary,
+          variableSalary: formData.variable_salary,
+          allowances: formData.allowances,
+          grossPay: calculatedGrossPay,
+          deductionsTax: formData.deductions_tax,
+          deductionsInsurance: formData.deductions_insurance,
+          deductionsPension: formData.deductions_pension,
+          deductionsOther: formData.deductions_other,
+          totalDeductions: calculatedTotalDeductions,
+          netPay: calculatedNetPay,
+        });
+
+        // Upload generated PDF
+        const month = format(new Date(formData.pay_period_start), "yyyy-MM");
+        const fileName = `${employee.employee_id}_${month}.pdf`;
+        const filePath = `payslips/${formData.employee_id}/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("payslip-documents")
+          .upload(filePath, pdfBlob, { upsert: true });
+
+        if (uploadError) throw uploadError;
+        payslipUrl = filePath;
+      } else {
+        // Use uploaded file
         payslipUrl = await uploadPayslip(
           selectedFile,
           formData.employee_id,
@@ -285,12 +334,67 @@ export const PayrollAdminManagement = () => {
       if (!selectedRecord) return;
 
       let payslipUrl = selectedRecord.payslip_pdf_url;
+
+      // Only regenerate PDF if salary details changed and no new file uploaded
+      const salaryChanged =
+        formData.fixed_salary !== selectedRecord.fixed_salary ||
+        formData.variable_salary !== selectedRecord.variable_salary ||
+        formData.allowances !== selectedRecord.allowances ||
+        formData.deductions_tax !== selectedRecord.deductions_tax ||
+        formData.deductions_insurance !== selectedRecord.deductions_insurance ||
+        formData.deductions_pension !== selectedRecord.deductions_pension ||
+        formData.deductions_other !== selectedRecord.deductions_other;
+
       if (selectedFile) {
+        // Use uploaded file
         payslipUrl = await uploadPayslip(
           selectedFile,
           formData.employee_id,
           formData.pay_period_start
         );
+      } else if (salaryChanged) {
+        // Regenerate PDF with updated values
+        const employee = employees.find((e) => e.id === formData.employee_id);
+        if (!employee) throw new Error("Employee not found");
+
+        const calculatedGrossPay =
+          formData.fixed_salary + formData.variable_salary + formData.allowances;
+        const calculatedTotalDeductions =
+          formData.deductions_tax +
+          formData.deductions_insurance +
+          formData.deductions_pension +
+          formData.deductions_other;
+        const calculatedNetPay = calculatedGrossPay - calculatedTotalDeductions;
+
+        const pdfBlob = generatePayslipPDF({
+          employeeName: employee.full_name,
+          employeeId: employee.employee_id,
+          email: employee.email,
+          payPeriodStart: formData.pay_period_start,
+          payPeriodEnd: formData.pay_period_end,
+          paymentDate: formData.payment_date,
+          fixedSalary: formData.fixed_salary,
+          variableSalary: formData.variable_salary,
+          allowances: formData.allowances,
+          grossPay: calculatedGrossPay,
+          deductionsTax: formData.deductions_tax,
+          deductionsInsurance: formData.deductions_insurance,
+          deductionsPension: formData.deductions_pension,
+          deductionsOther: formData.deductions_other,
+          totalDeductions: calculatedTotalDeductions,
+          netPay: calculatedNetPay,
+        });
+
+        const month = format(new Date(formData.pay_period_start), "yyyy-MM");
+        const fileName = `${employee.employee_id}_${month}.pdf`;
+        const filePath = `payslips/${formData.employee_id}/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("payslip-documents")
+          .upload(filePath, pdfBlob, { upsert: true });
+
+        if (uploadError) throw uploadError;
+        payslipUrl = filePath;
       }
 
       const { error } = await supabase
@@ -640,16 +744,21 @@ export const PayrollAdminManagement = () => {
 
           {/* PDF Upload */}
           <div className="grid gap-2">
-            <Label htmlFor="payslip">Payslip PDF</Label>
+            <Label htmlFor="payslip">Payslip PDF (Optional)</Label>
             <Input
               id="payslip"
               type="file"
               accept=".pdf"
               onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
             />
+            {!selectedFile && !isEdit && (
+              <p className="text-sm text-muted-foreground">
+                ✨ A professional payslip will be auto-generated if no file is uploaded
+              </p>
+            )}
             {isEdit && selectedRecord?.payslip_pdf_url && !selectedFile && (
               <p className="text-sm text-muted-foreground">
-                Current file uploaded. Upload new file to replace.
+                Current file uploaded. Upload new file or leave blank to auto-regenerate if salary changes.
               </p>
             )}
           </div>
