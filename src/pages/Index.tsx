@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Navigate } from "react-router-dom";
 import { Dashboard } from "@/components/Dashboard";
-import { EmployeeDashboard } from "@/components/EmployeeDashboard";
 import { AdminDashboard } from "@/components/AdminDashboard";
 import { LeaveManagement } from "@/components/LeaveManagement";
 import { Navigation } from "@/components/ui/navigation";
@@ -206,11 +205,17 @@ const Index = () => {
           activeTab !== 'dashboard' && "pb-20 lg:pb-8"
         )}>
           {activeTab === 'dashboard' && (
-            <EmployeeDashboard 
+            <Dashboard 
+              userRole={profile.role} 
               currentUser={{
                 name: profile.full_name || profile.email.split('@')[0],
                 email: profile.email,
                 avatar: profile.avatar_url
+              }}
+              userProfile={{
+                user_id: profile.user_id,
+                email: profile.email,
+                full_name: profile.full_name || profile.email.split('@')[0]
               }}
               onLogout={signOut}
               onNavigate={handleNavigationClick}
