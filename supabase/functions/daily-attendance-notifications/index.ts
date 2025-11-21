@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.55.0";
 import { Resend } from "npm:resend@2.0.0";
-import { nowInGST, toGST, yesterdayInGST, formatTime12Hour, parseScheduledTime, getDayName, isWorkingDay } from '../_shared/timezone.ts';
+import { nowInGST, yesterdayInGST, formatTimeInGST, parseScheduledTimeAsUTC, getDayName, isWorkingDay } from '../_shared/timezone.ts';
 
 // CORS headers
 const corsHeaders = {
@@ -135,7 +135,7 @@ const handler = async (req: Request): Promise<Response> => {
       }
 
       // Check if yesterday was a working day for this employee
-      const yesterdayDate = toGST(new Date(targetDate + "T00:00:00Z"));
+      const yesterdayDate = new Date(targetDate + "T00:00:00Z");
       if (!isWorkingDay(yesterdayDate, schedule.working_days || [])) {
         console.log(`Skipping ${employee.full_name} - ${getDayName(yesterdayDate)} is not a working day`);
         continue;
@@ -152,34 +152,38 @@ const handler = async (req: Request): Promise<Response> => {
         });
       } else {
         // Check for late check-in
-        const clockInTime = toGST(attendance.clock_in_time);
-        const scheduledStart = parseScheduledTime(targetDate, schedule.start_time);
+        const clockInTimeUTC = new Date(attendance.clock_in_time); // Keep as UTC
+        const scheduledStartUTC = parseScheduledTimeAsUTC(targetDate, schedule.start_time);
         
-        if (clockInTime > scheduledStart) {
-          const lateHours = (clockInTime.getTime() - scheduledStart.getTime()) / (1000 * 60 * 60);
+        if (clockInTimeUTC > scheduledStartUTC) {
+          const lateMs = clockInTimeUTC.getTime() - scheduledStartUTC.getTime();
+          const lateHours = lateMs / (1000 * 60 * 60);
+          
           issues.push({
             type: 'late',
             details: {
               late_hours: Math.round(lateHours * 100) / 100,
-              clock_in_time: formatTime12Hour(clockInTime),
-              scheduled_start: formatTime12Hour(scheduledStart)
+              clock_in_time: formatTimeInGST(clockInTimeUTC),      // Display in GST
+              scheduled_start: formatTimeInGST(scheduledStartUTC)  // Display in GST
             }
           });
         }
 
         // Check for early check-out
         if (attendance.clock_out_time) {
-          const clockOutTime = toGST(attendance.clock_out_time);
-          const scheduledEnd = parseScheduledTime(targetDate, schedule.end_time);
+          const clockOutTimeUTC = new Date(attendance.clock_out_time); // Keep as UTC
+          const scheduledEndUTC = parseScheduledTimeAsUTC(targetDate, schedule.end_time);
           
-          if (clockOutTime < scheduledEnd) {
-            const earlyHours = (scheduledEnd.getTime() - clockOutTime.getTime()) / (1000 * 60 * 60);
+          if (clockOutTimeUTC < scheduledEndUTC) {
+            const earlyMs = scheduledEndUTC.getTime() - clockOutTimeUTC.getTime();
+            const earlyHours = earlyMs / (1000 * 60 * 60);
+            
             issues.push({
               type: 'early',
               details: {
                 early_hours: Math.round(earlyHours * 100) / 100,
-                clock_out_time: formatTime12Hour(clockOutTime),
-                scheduled_end: formatTime12Hour(scheduledEnd)
+                clock_out_time: formatTimeInGST(clockOutTimeUTC),  // Display in GST
+                scheduled_end: formatTimeInGST(scheduledEndUTC)    // Display in GST
               }
             });
           }
