@@ -22,7 +22,11 @@ interface EmployeeData {
   staff_id: string | null;
 }
 
-export default function EmployeeProfile() {
+interface EmployeeProfileProps {
+  embedded?: boolean;
+}
+
+export default function EmployeeProfile({ embedded = false }: EmployeeProfileProps) {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
   const [employee, setEmployee] = useState<EmployeeData | null>(null);
@@ -73,35 +77,55 @@ export default function EmployeeProfile() {
   const initials = `${firstName[0] || ""}${lastName[0] || ""}`.toUpperCase();
 
   return (
-    <div className="min-h-screen bg-muted/30">
-      {/* Header */}
-      <div className="bg-[hsl(var(--primary))] text-primary-foreground p-6">
-        <div className="container mx-auto">
-          <div className="flex items-center gap-6">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate("/")}
-              className="text-primary-foreground hover:bg-primary-foreground/10"
-            >
-              <ArrowLeft className="h-6 w-6" />
-            </Button>
-            <Avatar className="h-24 w-24 border-4 border-primary-foreground/20">
+    <div className={embedded ? "" : "min-h-screen bg-muted/30"}>
+      {/* Header - Only show when not embedded */}
+      {!embedded && (
+        <div className="bg-[hsl(var(--primary))] text-primary-foreground p-6">
+          <div className="container mx-auto">
+            <div className="flex items-center gap-6">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate("/")}
+                className="text-primary-foreground hover:bg-primary-foreground/10"
+              >
+                <ArrowLeft className="h-6 w-6" />
+              </Button>
+              <Avatar className="h-24 w-24 border-4 border-primary-foreground/20">
+                <AvatarImage src={profile?.avatar_url || ""} />
+                <AvatarFallback className="text-2xl bg-primary-foreground/20">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <h1 className="text-3xl font-bold">Personal Details</h1>
+                <p className="text-primary-foreground/80 text-lg mt-1">{employee.full_name}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Embedded Header - Show when embedded in sidebar */}
+      {embedded && (
+        <div className="mb-6">
+          <div className="flex items-center gap-4 mb-4">
+            <Avatar className="h-16 w-16">
               <AvatarImage src={profile?.avatar_url || ""} />
-              <AvatarFallback className="text-2xl bg-primary-foreground/20">
+              <AvatarFallback className="text-xl">
                 {initials}
               </AvatarFallback>
             </Avatar>
             <div>
-              <h1 className="text-3xl font-bold">Personal Details</h1>
-              <p className="text-primary-foreground/80 text-lg mt-1">{employee.full_name}</p>
+              <h1 className="text-3xl font-bold text-foreground">My Profile</h1>
+              <p className="text-muted-foreground">{employee.full_name}</p>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Content */}
-      <div className="container mx-auto py-8 px-4 max-w-4xl">
+      <div className={embedded ? "max-w-4xl" : "container mx-auto py-8 px-4 max-w-4xl"}>
         <Accordion type="multiple" defaultValue={["name", "demographic"]} className="space-y-4">
           {/* Name Section */}
           <AccordionItem value="name" className="bg-card rounded-lg border">
