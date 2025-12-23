@@ -48,13 +48,23 @@ async function getManagerOrAdminEmails(employeeId: string, supabase: any): Promi
       }
     }
     
-    // If no manager or manager has no email, get all admin emails
-    const { data: admins } = await supabase
-      .from('profiles')
-      .select('email')
+    // If no manager or manager has no email, get all admin emails from user_roles table
+    const { data: adminRoles } = await supabase
+      .from('user_roles')
+      .select('user_id')
       .eq('role', 'admin');
     
-    return admins?.map((a: any) => a.email).filter((email: string) => email && email !== employee?.email) || [];
+    if (adminRoles && adminRoles.length > 0) {
+      const adminUserIds = adminRoles.map((ar: any) => ar.user_id);
+      const { data: adminEmployees } = await supabase
+        .from('employees')
+        .select('email')
+        .in('user_id', adminUserIds);
+      
+      return adminEmployees?.map((a: any) => a.email).filter((email: string) => email && email !== employee?.email) || [];
+    }
+    
+    return [];
   } catch (error) {
     console.error('Error fetching manager/admin emails:', error);
     return [];
