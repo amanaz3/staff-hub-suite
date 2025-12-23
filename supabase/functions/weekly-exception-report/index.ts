@@ -25,7 +25,7 @@ async function getManagerOrAdminEmails(employeeId: string, supabase: any): Promi
   // First try to get manager's email
   const { data: employee } = await supabase
     .from('employees')
-    .select('manager_id')
+    .select('manager_id, email')
     .eq('id', employeeId)
     .single();
 
@@ -36,20 +36,28 @@ async function getManagerOrAdminEmails(employeeId: string, supabase: any): Promi
       .eq('id', employee.manager_id)
       .single();
 
-    if (manager?.email) {
+    if (manager?.email && manager.email !== employee.email) {
       ccEmails.push(manager.email);
     }
   }
 
-  // If no manager email, get admin emails
+  // If no manager email, get admin emails from user_roles table
   if (ccEmails.length === 0) {
-    const { data: admins } = await supabase
-      .from('profiles')
-      .select('email')
+    const { data: adminRoles } = await supabase
+      .from('user_roles')
+      .select('user_id')
       .eq('role', 'admin');
 
-    if (admins) {
-      ccEmails.push(...admins.map((admin: any) => admin.email));
+    if (adminRoles && adminRoles.length > 0) {
+      const adminUserIds = adminRoles.map((ar: any) => ar.user_id);
+      const { data: adminEmployees } = await supabase
+        .from('employees')
+        .select('email')
+        .in('user_id', adminUserIds);
+
+      if (adminEmployees) {
+        ccEmails.push(...adminEmployees.map((a: any) => a.email).filter((email: string) => email && email !== employee?.email));
+      }
     }
   }
 
